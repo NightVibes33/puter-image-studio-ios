@@ -59,3 +59,5 @@ final class MockImageGenerationClient: ImageGenerationClient {
         return pngData
     }
 }
+
+extension MockImageGenerationClient: @unchecked Sendable {}

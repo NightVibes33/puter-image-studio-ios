@@ -1,6 +1,6 @@
 import Foundation
 
-struct StylePreset: Identifiable, Codable, Equatable, Hashable {
+struct StylePreset: Identifiable, Codable, Equatable, Hashable, Sendable {
     var id: String
     var title: String
     var systemImage: String

@@ -4,7 +4,7 @@ import Foundation
 import UIKit
 #endif
 
-enum GenerationError: LocalizedError, Equatable {
+enum GenerationError: LocalizedError, Equatable, Sendable {
     case emptyPrompt
     case promptTooLong(maxCharacters: Int)
     case invalidEndpoint

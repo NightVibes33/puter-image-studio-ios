@@ -76,3 +76,5 @@ final class ImageDownloadClient {
         }
     }
 }
+
+extension ImageDownloadClient: @unchecked Sendable {}

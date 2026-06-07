@@ -1,7 +1,7 @@
 import Foundation
 import Photos
 
-final class PhotoLibrarySaver {
+final class PhotoLibrarySaver: Sendable {
     func saveImage(at fileURL: URL) async throws {
         let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
         guard status == .authorized || status == .limited else {

@@ -1,6 +1,6 @@
 import Foundation
 
-struct AspectPreset: Identifiable, Codable, Equatable, Hashable {
+struct AspectPreset: Identifiable, Codable, Equatable, Hashable, Sendable {
     var id: String
     var title: String
     var subtitle: String

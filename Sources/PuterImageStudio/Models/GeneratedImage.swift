@@ -1,6 +1,6 @@
 import Foundation
 
-struct GeneratedImage: Identifiable, Codable, Equatable, Hashable {
+struct GeneratedImage: Identifiable, Codable, Equatable, Hashable, Sendable {
     var id: UUID
     var prompt: String
     var revisedPrompt: String?

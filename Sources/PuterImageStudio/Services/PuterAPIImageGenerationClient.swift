@@ -129,3 +129,5 @@ final class PuterAPIImageGenerationClient: ImageGenerationClient {
         }
     }
 }
+
+extension PuterAPIImageGenerationClient: @unchecked Sendable {}

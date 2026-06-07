@@ -1,6 +1,6 @@
 import Foundation
 
-struct ImageGenerationRequest: Codable, Equatable {
+struct ImageGenerationRequest: Codable, Equatable, Sendable {
     var prompt: String
     var model: String
     var quality: String?
@@ -8,7 +8,7 @@ struct ImageGenerationRequest: Codable, Equatable {
     var height: Int
     var responseFormat: ResponseFormat
 
-    enum ResponseFormat: String, Codable {
+    enum ResponseFormat: String, Codable, Sendable {
         case url
         case b64JSON = "b64_json"
     }

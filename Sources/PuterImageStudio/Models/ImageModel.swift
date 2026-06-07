@@ -1,6 +1,6 @@
 import Foundation
 
-struct ImageModel: Identifiable, Codable, Equatable, Hashable {
+struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
     var id: String
     var title: String
     var subtitle: String
@@ -72,7 +72,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
-enum ImageQuality: String, Codable, CaseIterable, Identifiable, Hashable {
+enum ImageQuality: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case low
     case medium
     case high

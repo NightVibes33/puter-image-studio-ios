@@ -1,11 +1,11 @@
 import Foundation
 
-struct ImageGenerationResponse: Decodable, Equatable {
+struct ImageGenerationResponse: Decodable, Equatable, Sendable {
     var created: Int
     var data: [ImageGenerationData]
 }
 
-struct ImageGenerationData: Decodable, Equatable {
+struct ImageGenerationData: Decodable, Equatable, Sendable {
     var revisedPrompt: String?
     var url: URL?
     var b64JSON: String?
@@ -17,10 +17,10 @@ struct ImageGenerationData: Decodable, Equatable {
     }
 }
 
-struct ImageGenerationErrorResponse: Decodable, Equatable {
+struct ImageGenerationErrorResponse: Decodable, Equatable, Sendable {
     var error: APIError
 
-    struct APIError: Decodable, Equatable {
+    struct APIError: Decodable, Equatable, Sendable {
         var message: String
         var detail: String?
     }
