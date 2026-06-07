@@ -1,0 +1,123 @@
+name: iOS unsigned IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to create or update, for example v1.0.0 or nightly
+        required: false
+        default: nightly
+      publish_release:
+        description: Attach IPA and AltSource JSON to a GitHub Release
+        type: boolean
+        required: true
+        default: true
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  SCHEME: PuterImageStudio
+  CONFIGURATION: Release
+  IPA_NAME: ImageStudio-unsigned.ipa
+  PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudio
+  IOS_DEPLOYMENT_TARGET: '26.0'
+
+jobs:
+  build:
+    name: Build unsigned iOS 26 device IPA
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: Scripts/select_xcode_26.sh
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_NAME="${{ inputs.release_tag || '' }}"
+          if [[ -z "$TAG_NAME" && "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG_NAME="${GITHUB_REF_NAME}"
+          fi
+          if [[ -z "$TAG_NAME" ]]; then
+            TAG_NAME="nightly-${GITHUB_RUN_NUMBER}"
+          fi
+
+          if [[ "$TAG_NAME" =~ ^v?[0-9]+(\.[0-9]+){0,2}$ ]]; then
+            VERSION="${TAG_NAME#v}"
+          else
+            VERSION="1.0"
+          fi
+
+          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag=$TAG_NAME version=$VERSION build=${GITHUB_RUN_NUMBER}"
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build unsigned IPA
+        id: package
+        env:
+          MARKETING_VERSION: ${{ steps.meta.outputs.version }}
+          CURRENT_PROJECT_VERSION: ${{ steps.meta.outputs.build }}
+        run: Scripts/package_unsigned_ipa.sh
+
+      - name: Prepare AltStore and SideStore source
+        env:
+          RELEASE_TAG: ${{ steps.meta.outputs.tag }}
+          MARKETING_VERSION: ${{ steps.meta.outputs.version }}
+          CURRENT_PROJECT_VERSION: ${{ steps.meta.outputs.build }}
+          IPA_PATH: ${{ steps.package.outputs.IPA_PATH }}
+          IPA_SIZE: ${{ steps.package.outputs.IPA_SIZE }}
+          MIN_OS_VERSION: '26.0'
+        run: |
+          set -euo pipefail
+          cp Sources/PuterImageStudio/Assets.xcassets/AppIcon.appiconset/AppIcon.png build/AppIcon.png
+          Scripts/generate_altstore_source.py
+          SOURCE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.meta.outputs.tag }}/altstore-source.json"
+          {
+            echo "AltStore/SideStore source: $SOURCE_URL"
+            echo "SideStore one-tap URL: sidestore://source?url=$SOURCE_URL"
+          } | tee build/source-url.txt
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImageStudio-iOS26-unsigned
+          path: |
+            build/ImageStudio-unsigned.ipa
+            build/altstore-source.json
+            build/AppIcon.png
+            build/source-url.txt
+          if-no-files-found: error
+
+      - name: Publish GitHub release assets
+        if: github.ref_type == 'tag' || inputs.publish_release == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release create "$TAG_NAME" \
+              --title "$TAG_NAME" \
+              --notes "Unsigned iOS 26 device IPA for AltStore and SideStore. Add the source URL from source-url.txt."
+          fi
+          gh release upload "$TAG_NAME" \
+            build/ImageStudio-unsigned.ipa \
+            build/altstore-source.json \
+            build/AppIcon.png \
+            build/source-url.txt \
+            --clobber

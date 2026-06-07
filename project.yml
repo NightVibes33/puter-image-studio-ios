@@ -1,0 +1,49 @@
+name: PuterImageStudio
+options:
+  bundleIdPrefix: com.nightvibes
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 1.0
+    SWIFT_VERSION: 6.0
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+configs:
+  Debug: debug
+  Release: release
+targets:
+  PuterImageStudio:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/PuterImageStudio
+    info:
+      path: Sources/PuterImageStudio/App/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudio
+        PRODUCT_NAME: Image Studio
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+      configs:
+        Debug:
+          IMAGE_API_BASE_URL: http://127.0.0.1:8787
+        Release:
+          IMAGE_API_BASE_URL: https://api.your-domain.example
+    scheme:
+      testTargets:
+        - PuterImageStudioTests
+  PuterImageStudioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/PuterImageStudioTests
+    dependencies:
+      - target: PuterImageStudio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudioTests
