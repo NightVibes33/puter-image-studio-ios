@@ -68,6 +68,15 @@ if [[ -z "$APP_PATH" ]]; then
   exit 3
 fi
 
+BUILT_INFO_PLIST="$APP_PATH/Info.plist"
+BUILT_API_BASE_URL="$(/usr/libexec/PlistBuddy -c 'Print :IMAGE_API_BASE_URL' "$BUILT_INFO_PLIST" 2>/dev/null || true)"
+if [[ "$CONFIGURATION" == "Release" && "$BUILT_API_BASE_URL" != "$IMAGE_API_BASE_URL" ]]; then
+  echo "Built app Info.plist is missing the expected IMAGE_API_BASE_URL." >&2
+  echo "Expected: $IMAGE_API_BASE_URL" >&2
+  echo "Actual: ${BUILT_API_BASE_URL:-<missing>}" >&2
+  exit 5
+fi
+
 cp -R "$APP_PATH" "$BUILD_ROOT/ipa/Payload/"
 
 # Keep the IPA unsigned for AltStore/SideStore to sign during install.
