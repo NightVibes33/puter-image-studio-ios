@@ -21,6 +21,23 @@ targets:
       - path: Sources/PuterImageStudio
     info:
       path: Sources/PuterImageStudio/App/Info.plist
+      properties:
+        CFBundleDisplayName: Image Studio
+        IMAGE_API_BASE_URL: $(IMAGE_API_BASE_URL)
+        NSPhotoLibraryAddUsageDescription: Image Studio saves generated artwork only when you tap Save.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudio
