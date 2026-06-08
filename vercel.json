@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/v1/images/generations", "destination": "/api/v1/images/generations" }
+  ],
+  "functions": {
+    "api/v1/images/generations.js": {
+      "maxDuration": 120
+    }
+  }
+}

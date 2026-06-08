@@ -1,0 +1,11 @@
+{
+  "name": "puter-image-studio-ios-backend",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "check:api": "node --check api/health.js && node --check api/v1/images/generations.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

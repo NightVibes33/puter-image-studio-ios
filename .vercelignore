@@ -1,0 +1,8 @@
+.git
+build
+*.ipa
+*.zip
+PuterImageStudio.xcodeproj
+DerivedData
+Scripts/__pycache__
+node_modules
