@@ -31,12 +31,13 @@ final class LocalStableDiffusionImageGenerationClient: ImageGenerationClient {
 
         let seed = UInt32.random(in: UInt32.min...UInt32.max)
         let prompt = request.prompt
-        let imageData = try await Task.detached(priority: .userInitiated) {
+        let generationTask = Task.detached(priority: .userInitiated) {
             let configuration = MLModelConfiguration()
             configuration.computeUnits = .cpuAndNeuralEngine
 
             let pipeline = try StableDiffusionPipeline(
                 resourcesAt: resourceURL,
+                controlNet: [],
                 configuration: configuration,
                 disableSafety: true,
                 reduceMemory: true
@@ -61,7 +62,8 @@ final class LocalStableDiffusionImageGenerationClient: ImageGenerationClient {
                 throw GenerationError.downloadFailed
             }
             return imageData
-        }.value
+        }
+        let imageData = try await generationTask.value
 
         let id = UUID()
         let localFileName = try imageDownloadClient.writeImageData(
