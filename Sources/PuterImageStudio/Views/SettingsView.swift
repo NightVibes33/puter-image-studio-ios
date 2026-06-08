@@ -29,6 +29,24 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("Puter Account") {
+                    SecureField("Auth token", text: $settingsStore.userPuterAuthToken)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .privacySensitive()
+
+                    if !settingsStore.userPuterAuthToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Button("Clear Puter Token", role: .destructive) {
+                            settingsStore.userPuterAuthToken = ""
+                        }
+                    }
+
+                    Link("Copy token from Puter dashboard", destination: URL(string: "https://puter.com/dashboard#account")!)
+                    Text("Using your own Puter token avoids the shared server token and lets Puter bill usage to your Puter account/session.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryInk)
+                }
+
                 Section("Library") {
                     Button("Clear History", role: .destructive) {
                         showClearConfirmation = true

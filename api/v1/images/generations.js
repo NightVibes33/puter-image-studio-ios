@@ -129,6 +129,12 @@ function callPuterGenerate(params, token) {
   });
 }
 
+function getUserPuterToken(req) {
+  const header = req.headers['x-puter-auth-token'];
+  if (Array.isArray(header)) return header[0]?.trim() || '';
+  return typeof header === 'string' ? header.trim() : '';
+}
+
 function parseDataUrl(dataUrl) {
   const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl || '');
   if (!match) throw new Error('Puter response was not a PNG data URL');
@@ -138,7 +144,7 @@ function parseDataUrl(dataUrl) {
 module.exports = async function handler(req, res) {
   res.setHeader('access-control-allow-origin', '*');
   res.setHeader('access-control-allow-methods', 'POST,OPTIONS');
-  res.setHeader('access-control-allow-headers', 'content-type');
+  res.setHeader('access-control-allow-headers', 'content-type,x-puter-auth-token');
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();
@@ -158,7 +164,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const token = process.env.PUTER_AUTH_TOKEN;
+  const token = getUserPuterToken(req) || process.env.PUTER_AUTH_TOKEN;
   if (!token) {
     sendError(res, 500, 'Puter token is not configured');
     return;

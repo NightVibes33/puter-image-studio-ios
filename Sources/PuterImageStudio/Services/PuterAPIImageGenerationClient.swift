@@ -25,6 +25,10 @@ final class PuterAPIImageGenerationClient: ImageGenerationClient {
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let userToken = UserDefaults.standard.string(forKey: AppSettingsKeys.userPuterAuthToken)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !userToken.isEmpty {
+            urlRequest.setValue(userToken, forHTTPHeaderField: "X-Puter-Auth-Token")
+        }
         urlRequest.timeoutInterval = 125
         urlRequest.httpBody = try jsonEncoder.encode(request)
 
