@@ -11,7 +11,6 @@ final class AppSettingsStore: ObservableObject {
         didSet { userDefaults.set(defaultQualityRaw, forKey: Keys.defaultQualityRaw) }
     }
 
-    let promptMaxCharacters = 1_600
     let privacyPolicyURL = URL(string: "https://github.com/NightVibes33/puter-image-studio-ios/blob/main/PRIVACY.md")!
     let termsURL = URL(string: "https://github.com/NightVibes33/puter-image-studio-ios/blob/main/TERMS.md")!
     let supportURL = URL(string: "https://github.com/NightVibes33/puter-image-studio-ios/issues")!

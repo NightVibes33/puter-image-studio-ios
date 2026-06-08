@@ -89,18 +89,17 @@ final class PuterAPIImageGenerationClient: ImageGenerationClient {
         let message = errorResponse?.error.message ?? ""
         let detail = errorResponse?.error.detail ?? ""
         let combined = "\(message) \(detail)".lowercased()
-
-        if combined.contains("moderation") || combined.contains("blocked") || combined.contains("safety") {
-            return .moderationRejected
-        }
+        let displayMessage = [message, detail]
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .joined(separator: " ")
 
         if combined.contains("model") && (combined.contains("unsupported") || combined.contains("not available")) {
-            return .unsupportedModel(message.isEmpty ? "That model is not available yet." : message)
+            return .unsupportedModel(displayMessage.isEmpty ? "That model is not available yet." : displayMessage)
         }
 
         switch statusCode {
         case 400:
-            return .server(message.isEmpty ? "The image request was not accepted." : message)
+            return .server(displayMessage.isEmpty ? "The image request was not accepted." : displayMessage)
         case 401, 403:
             return .unauthorized
         case 408:
@@ -108,11 +107,11 @@ final class PuterAPIImageGenerationClient: ImageGenerationClient {
         case 429:
             return .rateLimited
         case 500:
-            return .server(message)
+            return .server(displayMessage)
         case 502, 503, 504:
-            return .providerUnavailable(message)
+            return .providerUnavailable(displayMessage)
         default:
-            return .server(message)
+            return .server(displayMessage)
         }
     }
 

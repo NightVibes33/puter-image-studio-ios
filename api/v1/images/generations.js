@@ -49,8 +49,8 @@ function cleanInt(value, fallback, min, max) {
 }
 
 function normalizeRequest(body) {
-  const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
-  if (!prompt) throw new Error('Missing required field: prompt');
+  const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+  if (!prompt.trim()) throw new Error('Missing required field: prompt');
 
   const size = typeof body.size === 'string' ? body.size.split('x') : [];
   return {

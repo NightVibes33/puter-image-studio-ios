@@ -6,7 +6,6 @@ import UIKit
 
 enum GenerationError: LocalizedError, Equatable, Sendable {
     case emptyPrompt
-    case promptTooLong(maxCharacters: Int)
     case invalidEndpoint
     case invalidResponse
     case invalidImageURL
@@ -15,7 +14,6 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
     case requestTimedOut
     case rateLimited
     case unauthorized
-    case moderationRejected
     case unsupportedModel(String)
     case providerUnavailable(String)
     case server(String)
@@ -27,8 +25,6 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         switch self {
         case .emptyPrompt:
             return "Enter a prompt before generating."
-        case .promptTooLong(let maxCharacters):
-            return "Keep prompts under \(maxCharacters) characters."
         case .invalidEndpoint:
             return "API not configured."
         case .invalidResponse:
@@ -45,12 +41,10 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
             return "You have reached the current generation limit. Try again later."
         case .unauthorized:
             return "The image service is not authorized. Contact support."
-        case .moderationRejected:
-            return "That prompt could not be generated. Try changing the wording."
         case .unsupportedModel(let message):
             return message.isEmpty ? "That model is not available yet." : message
-        case .providerUnavailable:
-            return "The image provider is temporarily unavailable. Try again."
+        case .providerUnavailable(let message):
+            return message.isEmpty ? "The image provider is temporarily unavailable. Try again." : message
         case .server(let message):
             return message.isEmpty ? "The image service had a problem. Try again." : message
         case .photosAccessDenied:
@@ -64,8 +58,6 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
 
     var recoverySuggestion: String? {
         switch self {
-        case .moderationRejected:
-            return "Keep the idea, but remove wording that might be read as unsafe or explicit."
         case .rateLimited:
             return "Lower quality or wait for the limit window to reset."
         case .invalidEndpoint:

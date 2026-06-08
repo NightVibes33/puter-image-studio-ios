@@ -2,7 +2,6 @@ import SwiftUI
 
 struct PromptComposerView: View {
     @Binding var prompt: String
-    var maxCharacters: Int
     var isFocused: FocusState<Bool>.Binding
 
     var body: some View {
@@ -30,11 +29,6 @@ struct PromptComposerView: View {
                     .scrollContentBackground(.hidden)
                     .background(AppTheme.panelBackground)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
-                    .onChange(of: prompt) { _, newValue in
-                        if newValue.count > maxCharacters {
-                            prompt = String(newValue.prefix(maxCharacters))
-                        }
-                    }
 
                 if prompt.isEmpty {
                     Text("A cinematic neon city at night")
@@ -46,9 +40,9 @@ struct PromptComposerView: View {
             }
 
             HStack {
-                Text("\(prompt.count)/\(maxCharacters)")
+                Text("\(prompt.count) characters")
                     .font(.caption)
-                    .foregroundStyle(prompt.count >= maxCharacters ? AppTheme.warmAccent : AppTheme.secondaryInk)
+                    .foregroundStyle(AppTheme.secondaryInk)
                 Spacer()
                 Button {
                     isFocused.wrappedValue = false

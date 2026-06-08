@@ -198,11 +198,6 @@ struct GenerateView: View {
                     .foregroundStyle(.white)
                     .scrollContentBackground(.hidden)
                     .background(.clear)
-                    .onChange(of: prompt) { _, newValue in
-                        if newValue.count > settingsStore.promptMaxCharacters {
-                            prompt = String(newValue.prefix(settingsStore.promptMaxCharacters))
-                        }
-                    }
 
                 if prompt.isEmpty {
                     Text("Type your image request...")
@@ -397,11 +392,6 @@ struct GenerateView: View {
             error = .emptyPrompt
             return
         }
-        guard trimmedPrompt.count <= settingsStore.promptMaxCharacters else {
-            error = .promptTooLong(maxCharacters: settingsStore.promptMaxCharacters)
-            return
-        }
-
         generationTask?.cancel()
         isPromptFocused = false
         error = nil
