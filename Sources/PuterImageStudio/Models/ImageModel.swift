@@ -12,11 +12,23 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         !supportedQualities.isEmpty
     }
 
+    var isLocal: Bool {
+        backendModel == LocalStableDiffusionModelStore.backendModelID
+    }
+
     static let presets: [ImageModel] = [
         ImageModel(
+            id: "local-sdxl",
+            title: "Local SDXL",
+            subtitle: "On-device, no credits",
+            backendModel: LocalStableDiffusionModelStore.backendModelID,
+            defaultQuality: nil,
+            supportedQualities: []
+        ),
+        ImageModel(
             id: "auto",
-            title: "Auto",
-            subtitle: "Fast default",
+            title: "Cloud Auto",
+            subtitle: "Online fallback",
             backendModel: "gpt-image-2",
             defaultQuality: .low,
             supportedQualities: [.low]

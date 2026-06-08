@@ -95,7 +95,7 @@ final class AppSettingsStore: ObservableObject {
 }
 
 
-private enum KeychainStore {
+enum KeychainStore {
     static let puterAuthTokenAccount = "puterAuthToken"
     private static let service = "com.nightvibes.imagestudio.puter"
 

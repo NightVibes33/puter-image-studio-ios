@@ -8,6 +8,10 @@ struct ImageGenerationRequest: Codable, Equatable, Sendable {
     var height: Int
     var responseFormat: ResponseFormat
 
+    var usesLocalModel: Bool {
+        model == LocalStableDiffusionModelStore.backendModelID
+    }
+
     enum ResponseFormat: String, Codable, Sendable {
         case url
         case b64JSON = "b64_json"

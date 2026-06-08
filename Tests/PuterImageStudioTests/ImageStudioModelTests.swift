@@ -33,6 +33,11 @@ final class ImageStudioModelTests: XCTestCase {
     }
 
     func testModelQualitySupportMatchesSpecification() {
+        let local = ImageModel.preset(id: "local-sdxl")
+        XCTAssertEqual(local.backendModel, LocalStableDiffusionModelStore.backendModelID)
+        XCTAssertTrue(local.isLocal)
+        XCTAssertFalse(local.supportsQuality)
+
         let auto = ImageModel.preset(id: "auto")
         XCTAssertEqual(auto.backendModel, "gpt-image-2")
         XCTAssertEqual(auto.supportedQualities, [.low])

@@ -15,6 +15,8 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
     case rateLimited
     case unauthorized
     case missingPuterConnection
+    case localModelMissing
+    case localEngineUnavailable
     case insufficientCredits(String)
     case unsupportedModel(String)
     case providerUnavailable(String)
@@ -44,7 +46,11 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .unauthorized:
             return "The image service is not authorized. Contact support."
         case .missingPuterConnection:
-            return "Connect Puter before generating images."
+            return "Connect Puter before using cloud image models."
+        case .localModelMissing:
+            return "Install the local SDXL model before generating offline."
+        case .localEngineUnavailable:
+            return "This build does not include the local Core ML Stable Diffusion engine."
         case .insufficientCredits(let message):
             return message.isEmpty ? "The Puter account for this build has insufficient credits." : message
         case .unsupportedModel(let message):
@@ -67,7 +73,11 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .rateLimited:
             return "Lower quality or wait for the limit window to reset."
         case .missingPuterConnection:
-            return "Open Settings and connect Puter so usage runs through Puter's user-pays model."
+            return "Open Settings and connect Puter, or switch back to Local SDXL."
+        case .localModelMissing:
+            return "Download Apple's iOS SDXL Core ML package and install its extracted compiled folder."
+        case .localEngineUnavailable:
+            return "Add the StableDiffusion Swift package to this build."
         case .insufficientCredits:
             return "Use a Puter account/session with available credits."
         case .invalidEndpoint:

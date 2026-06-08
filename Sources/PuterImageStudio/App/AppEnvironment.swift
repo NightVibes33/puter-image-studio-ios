@@ -27,15 +27,17 @@ final class AppEnvironment: ObservableObject {
         let imageDownloadClient = ImageDownloadClient()
         let settingsStore = AppSettingsStore()
         let historyStore = GenerationHistoryStore(imageDownloadClient: imageDownloadClient)
-        let client: ImageGenerationClient
+        let remoteClient: ImageGenerationClient
         if let baseURL = AppEnvironment.imageAPIBaseURL() {
-            client = PuterAPIImageGenerationClient(
+            remoteClient = PuterAPIImageGenerationClient(
                 baseURL: baseURL,
                 imageDownloadClient: imageDownloadClient
             )
         } else {
-            client = UnavailableImageGenerationClient(error: .invalidEndpoint)
+            remoteClient = UnavailableImageGenerationClient(error: .invalidEndpoint)
         }
+        let localClient = LocalStableDiffusionImageGenerationClient(imageDownloadClient: imageDownloadClient)
+        let client = HybridImageGenerationClient(localClient: localClient, remoteClient: remoteClient)
 
         return AppEnvironment(
             imageClient: client,

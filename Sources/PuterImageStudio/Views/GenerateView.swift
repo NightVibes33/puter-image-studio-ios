@@ -130,7 +130,7 @@ struct GenerateView: View {
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text("Instant AI images")
+                Text(selectedModel.isLocal ? "On-device generation" : "Cloud fallback")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.66))
                     .lineLimit(1)
@@ -392,7 +392,7 @@ struct GenerateView: View {
             error = .emptyPrompt
             return
         }
-        guard settingsStore.hasUserPuterToken else {
+        guard selectedModel.isLocal || settingsStore.hasUserPuterToken else {
             error = .missingPuterConnection
             return
         }
@@ -405,12 +405,14 @@ struct GenerateView: View {
         let composedPrompt = selectedStyle.apply(to: trimmedPrompt)
         visiblePrompt = trimmedPrompt
         let quality = selectedModel.supportsQuality ? selectedQuality?.rawValue : nil
+        let outputWidth = selectedModel.isLocal ? 768 : selectedAspect.width
+        let outputHeight = selectedModel.isLocal ? 768 : selectedAspect.height
         let request = ImageGenerationRequest(
             prompt: composedPrompt,
             model: selectedModel.backendModel,
             quality: quality,
-            width: selectedAspect.width,
-            height: selectedAspect.height,
+            width: outputWidth,
+            height: outputHeight,
             responseFormat: .b64JSON
         )
         let client = environment.imageClient

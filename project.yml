@@ -13,12 +13,19 @@ settings:
 configs:
   Debug: debug
   Release: release
+packages:
+  StableDiffusion:
+    url: https://github.com/apple/ml-stable-diffusion.git
+    from: 1.1.1
 targets:
   PuterImageStudio:
     type: application
     platform: iOS
     sources:
       - path: Sources/PuterImageStudio
+    dependencies:
+      - package: StableDiffusion
+        product: StableDiffusion
     info:
       path: Sources/PuterImageStudio/App/Info.plist
       properties:

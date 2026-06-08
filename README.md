@@ -1,6 +1,22 @@
 # Image Studio iOS
 
-Native SwiftUI image-generation app that talks to the custom Puter-backed image API through `POST /v1/images/generations`.
+Native SwiftUI image-generation app with a local-first Core ML SDXL path and optional cloud fallback through `POST /v1/images/generations`.
+
+## Local SDXL / Apple Neural Engine
+
+The Local SDXL model is the same class of setup described by LocalGen-style Reddit posts: Apple Core ML Stable Diffusion running on device with `.cpuAndNeuralEngine`, `SPLIT_EINSUM` attention, and reduced-memory loading. The app does not commit model weights. Install or ship the extracted Hugging Face folder below as either a bundled resource or under `Application Support/LocalModels/`:
+
+```text
+coreml-stable-diffusion-xl-base-ios_split_einsum_compiled
+```
+
+Model archive:
+
+```text
+https://huggingface.co/apple/coreml-stable-diffusion-xl-base-ios/resolve/main/coreml-stable-diffusion-xl-base-ios_split_einsum_compiled.zip
+```
+
+The archive is about 3 GB compressed and needs roughly 10 GB free during download, extraction, and first Core ML compilation. The current local path targets 768x768 output and uses 8 denoising steps for mobile latency. Full 20-step SDXL will be much slower than the Reddit marketing numbers on most devices.
 
 ## Local Backend
 
@@ -32,7 +48,8 @@ Build with Xcode 15+ or newer. This iSH runtime currently exposes Litter BuildKi
 ## Implemented V1 Scope
 
 - Native SwiftUI generator as the first screen
-- Prompt composer with max length guard
+- Local SDXL model option routed to Apple Core ML Stable Diffusion
+- Prompt composer without app-side content restrictions
 - Style presets that append prompt modifiers
 - Aspect, model, and quality selectors
 - Async API client with friendly HTTP/error mapping
@@ -44,7 +61,8 @@ Build with Xcode 15+ or newer. This iSH runtime currently exposes Litter BuildKi
 
 ## Production Checklist
 
-- Deploy the API behind HTTPS and set the GitHub repository variable `IMAGE_API_BASE_URL` before publishing a public Release IPA.
+- Ship the extracted Local SDXL Core ML model as app resources, Apple-hosted assets, or an in-app managed download before claiming offline generation.
+- Deploy the API behind HTTPS and set the GitHub repository variable `IMAGE_API_BASE_URL` only if cloud fallback remains enabled.
 - For local-only sideload testing, run `/root/puter-api-proof/server.js` and build with `api_base_url=http://127.0.0.1:8787`.
 - Add backend rate limiting by anonymous device ID and IP.
 - Keep model allowlists and final provider names backend-owned.

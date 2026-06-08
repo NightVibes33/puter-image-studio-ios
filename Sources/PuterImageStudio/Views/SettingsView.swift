@@ -7,6 +7,8 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @State private var showClearConfirmation = false
 
+    private let localModelStore = LocalStableDiffusionModelStore()
+
     var body: some View {
         NavigationStack {
             Form {
@@ -28,6 +30,20 @@ struct SettingsView: View {
                             }
                         }
                     }
+                }
+
+                Section("Local Generation") {
+                    Label(
+                        localModelStore.isInstalled() ? "Local SDXL installed" : "Local SDXL model missing",
+                        systemImage: localModelStore.isInstalled() ? "checkmark.circle.fill" : "externaldrive.badge.exclamationmark"
+                    )
+                    .foregroundStyle(localModelStore.isInstalled() ? AppTheme.success : AppTheme.warmAccent)
+
+                    Link("Download iOS SDXL Core ML model", destination: LocalStableDiffusionModelStore.downloadURL)
+
+                    Text("Use Apple's extracted \(LocalStableDiffusionModelStore.modelFolderName) folder. The local engine needs about \(localModelStore.expectedFreeSpaceDescription) free for download, extraction, and Core ML compilation.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryInk)
                 }
 
                 Section("Puter Account") {
