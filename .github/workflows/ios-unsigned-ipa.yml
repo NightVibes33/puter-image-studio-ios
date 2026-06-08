@@ -78,14 +78,18 @@ jobs:
       - name: Validate release API URL
         run: |
           set -euo pipefail
+          if [[ -z "${IMAGE_API_BASE_URL:-}" ]]; then
+            echo "::warning::Building a local-first IPA without a cloud fallback API URL."
+            exit 0
+          fi
           if [[ "${IMAGE_API_BASE_URL:-}" == https://* && "${IMAGE_API_BASE_URL}" != *.example* && "${IMAGE_API_BASE_URL}" != *.invalid* ]]; then
             exit 0
           fi
           if [[ "${ALLOW_LOCALHOST_API}" == "true" && ( "${IMAGE_API_BASE_URL:-}" == http://127.0.0.1:* || "${IMAGE_API_BASE_URL:-}" == http://localhost:* ) ]]; then
-            echo "::warning::Building a localhost-only IPA. The root Puter API must be running on the same iPhone."
+            echo "::warning::Building a localhost-only IPA. The root Puter API must be running on the same iPhone for cloud fallback."
             exit 0
           fi
-          echo "::error::Set IMAGE_API_BASE_URL to deployed HTTPS, or pass api_base_url=http://127.0.0.1:8787 with allow_localhost_api=true for a local root API build."
+          echo "::error::Set IMAGE_API_BASE_URL to deployed HTTPS, leave it empty for local-only generation, or pass api_base_url=http://127.0.0.1:8787 with allow_localhost_api=true for a local fallback API build."
           exit 1
 
       - name: Generate Xcode project
