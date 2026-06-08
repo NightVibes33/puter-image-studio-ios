@@ -273,7 +273,8 @@ struct GenerateView: View {
             model: selectedModel.backendModel,
             quality: quality,
             width: selectedAspect.width,
-            height: selectedAspect.height
+            height: selectedAspect.height,
+            responseFormat: .b64JSON
         )
         let client = environment.imageClient
         let store = historyStore

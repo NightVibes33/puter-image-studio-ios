@@ -8,7 +8,8 @@ final class ImageStudioModelTests: XCTestCase {
             model: "gpt-image-2",
             quality: "low",
             width: 512,
-            height: 512
+            height: 512,
+            responseFormat: .b64JSON
         )
 
         let data = try JSONEncoder().encode(request)
@@ -19,7 +20,7 @@ final class ImageStudioModelTests: XCTestCase {
         XCTAssertEqual(object["quality"] as? String, "low")
         XCTAssertEqual(object["width"] as? Int, 512)
         XCTAssertEqual(object["height"] as? Int, 512)
-        XCTAssertEqual(object["response_format"] as? String, "url")
+        XCTAssertEqual(object["response_format"] as? String, "b64_json")
     }
 
     func testStylePresetAppendsPromptModifier() {

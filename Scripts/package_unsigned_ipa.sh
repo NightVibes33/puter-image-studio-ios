@@ -14,10 +14,23 @@ IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-26.0}"
 MARKETING_VERSION="${MARKETING_VERSION:-1.0}"
 CURRENT_PROJECT_VERSION="${CURRENT_PROJECT_VERSION:-1}"
 IMAGE_API_BASE_URL="${IMAGE_API_BASE_URL:-}"
+ALLOW_LOCALHOST_API="${ALLOW_LOCALHOST_API:-0}"
+
+is_localhost_api() {
+  [[ "$IMAGE_API_BASE_URL" == http://127.0.0.1:* || "$IMAGE_API_BASE_URL" == http://localhost:* ]]
+}
+
+is_https_api() {
+  [[ "$IMAGE_API_BASE_URL" == https://* && "$IMAGE_API_BASE_URL" != *.example* && "$IMAGE_API_BASE_URL" != *.invalid* ]]
+}
 
 if [[ "$CONFIGURATION" == "Release" ]]; then
-  if [[ -z "$IMAGE_API_BASE_URL" || "$IMAGE_API_BASE_URL" != https://* || "$IMAGE_API_BASE_URL" == *.example* || "$IMAGE_API_BASE_URL" == *.invalid* ]]; then
-    echo "Release builds require IMAGE_API_BASE_URL to be a real HTTPS endpoint." >&2
+  if is_https_api; then
+    :
+  elif [[ "$ALLOW_LOCALHOST_API" == "1" || "$ALLOW_LOCALHOST_API" == "true" ]] && is_localhost_api; then
+    echo "Warning: building localhost-only IPA against $IMAGE_API_BASE_URL" >&2
+  else
+    echo "Release builds require IMAGE_API_BASE_URL to be HTTPS, or ALLOW_LOCALHOST_API=1 with http://127.0.0.1:<port>." >&2
     exit 4
   fi
 fi

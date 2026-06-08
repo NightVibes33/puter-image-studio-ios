@@ -9,7 +9,7 @@ rg -n "PUTER_AUTH_TOKEN|api\.puter\.com|puter-token" Sources project.yml README.
 
 Expected result: no hits in `Sources/`. Mentions in docs are acceptable only when documenting that secrets stay server-side.
 
-Release builds must use HTTPS for `IMAGE_API_BASE_URL`; do not submit a build pointed at localhost.
+Public release builds must use HTTPS for `IMAGE_API_BASE_URL`. Localhost builds are for SideStore/AltStore testing only and require the root Puter API to be running on the same iPhone.
 
 ## Unsigned IPA Checks
 

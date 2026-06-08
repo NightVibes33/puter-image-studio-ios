@@ -5,10 +5,11 @@ The `.github/workflows/ios-unsigned-ipa.yml` workflow builds on `macos-26`, sele
 ## Manual Run
 
 1. Push this project to GitHub.
-2. Set the repository variable `IMAGE_API_BASE_URL` to the deployed HTTPS image API.
-3. Open Actions -> iOS unsigned IPA.
-4. Run workflow with `release_tag` set to a tag like `v1.0.0` or `nightly`.
-5. Download the `ImageStudio-iOS26-unsigned` artifact, or use the GitHub Release assets if publishing is enabled.
+2. For a public build, set the repository variable `IMAGE_API_BASE_URL` to the deployed HTTPS image API.
+3. For a local root API build, leave the repo variable alone and pass workflow inputs `api_base_url=http://127.0.0.1:8787` plus `allow_localhost_api=true`.
+4. Open Actions -> iOS unsigned IPA.
+5. Run workflow with `release_tag` set to a tag like `v1.0.0` or `nightly`.
+6. Download the `ImageStudio-iOS26-unsigned` artifact, or use the GitHub Release assets if publishing is enabled.
 
 ## Release Assets
 

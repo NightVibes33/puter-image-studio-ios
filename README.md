@@ -11,9 +11,11 @@ node --no-jitless /root/puter-api-proof/server.js
 curl http://127.0.0.1:8787/health
 ```
 
-Debug builds use `http://127.0.0.1:8787` through the `IMAGE_API_BASE_URL` build setting. Release packaging now requires `IMAGE_API_BASE_URL` to be supplied as a real deployed HTTPS endpoint; CI fails before building if the repository variable is missing.
+Debug builds use `http://127.0.0.1:8787` through the `IMAGE_API_BASE_URL` build setting. Public Release packaging requires `IMAGE_API_BASE_URL` to be supplied as a real deployed HTTPS endpoint; CI fails before building if the repository variable is missing.
 
-The app never calls `api.puter.com` and does not contain `PUTER_AUTH_TOKEN`. The token stays in the server process.
+For a local SideStore/AltStore build that uses the API already in `/root/puter-api-proof`, run that server on the same iPhone and dispatch the GitHub workflow with `api_base_url=http://127.0.0.1:8787` and `allow_localhost_api=true`. That IPA only generates while the root API process is running.
+
+The app requests `b64_json` from the API, so the backend does not need to host generated image files for the iOS app. The app never calls `api.puter.com` and does not contain `PUTER_AUTH_TOKEN`. The token stays in the server process.
 
 ## Generate The Xcode Project
 
@@ -42,7 +44,8 @@ Build with Xcode 15+ or newer. This iSH runtime currently exposes Litter BuildKi
 
 ## Production Checklist
 
-- Deploy the API behind HTTPS and set the GitHub repository variable `IMAGE_API_BASE_URL` before publishing a Release IPA.
+- Deploy the API behind HTTPS and set the GitHub repository variable `IMAGE_API_BASE_URL` before publishing a public Release IPA.
+- For local-only sideload testing, run `/root/puter-api-proof/server.js` and build with `api_base_url=http://127.0.0.1:8787`.
 - Add backend rate limiting by anonymous device ID and IP.
 - Keep model allowlists and final provider names backend-owned.
 - Replace placeholder app icon assets before TestFlight.
