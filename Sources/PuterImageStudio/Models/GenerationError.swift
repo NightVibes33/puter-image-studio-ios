@@ -16,6 +16,7 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
     case unauthorized
     case missingPuterConnection
     case localModelMissing
+    case localModelStorageTooLow(String)
     case localEngineUnavailable
     case insufficientCredits(String)
     case unsupportedModel(String)
@@ -49,6 +50,8 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
             return "Connect Puter before using cloud image models."
         case .localModelMissing:
             return "Install the local SDXL model before generating offline."
+        case .localModelStorageTooLow(let message):
+            return message
         case .localEngineUnavailable:
             return "This build does not include the local Core ML Stable Diffusion engine."
         case .insufficientCredits(let message):
@@ -75,7 +78,9 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .missingPuterConnection:
             return "Open Settings and connect Puter, or switch back to Local SDXL."
         case .localModelMissing:
-            return "Download Apple's iOS SDXL Core ML package and install its extracted compiled folder."
+            return "Open Settings and install Local SDXL."
+        case .localModelStorageTooLow:
+            return "Free up storage, then retry the local model install."
         case .localEngineUnavailable:
             return "Add the StableDiffusion Swift package to this build."
         case .insufficientCredits:

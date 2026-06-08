@@ -49,6 +49,10 @@ struct GenerateView: View {
                                 savedBanner(savedMessage)
                             }
 
+                            if selectedModel.isLocal && localModelInstaller.state != .installed {
+                                localModelStatusCard
+                            }
+
                             promptSurface
 
                             QuickActionGrid(actions: quickActions) { action in
@@ -186,6 +190,104 @@ struct GenerateView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 10)
+        }
+    }
+
+
+    private var localModelStatusCard: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: localModelStatusIcon)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(localModelStatusTint)
+                .frame(width: 34, height: 34)
+                .background(.white.opacity(0.08), in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(localModelStatusTitle)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                Text(localModelStatusMessage)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.70))
+                    .lineLimit(3)
+            }
+
+            Spacer(minLength: 8)
+
+            localModelStatusAction
+        }
+        .padding(12)
+        .background(.black.opacity(0.36), in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+        .overlay(glassBorder(cornerRadius: AppTheme.cornerRadius))
+    }
+
+    private var localModelStatusIcon: String {
+        switch localModelInstaller.state {
+        case .downloading: return "arrow.down.circle"
+        case .unpacking: return "archivebox"
+        case .failed: return "exclamationmark.triangle.fill"
+        case .missing: return "externaldrive.badge.exclamationmark"
+        case .installed: return "checkmark.circle.fill"
+        }
+    }
+
+    private var localModelStatusTint: Color {
+        switch localModelInstaller.state {
+        case .failed, .missing:
+            return AppTheme.warmAccent
+        case .installed:
+            return AppTheme.success
+        case .downloading, .unpacking:
+            return AppTheme.accent
+        }
+    }
+
+    private var localModelStatusTitle: String {
+        switch localModelInstaller.state {
+        case .downloading: return "Downloading Local SDXL"
+        case .unpacking: return "Installing Local SDXL"
+        case .failed: return "Local SDXL install failed"
+        case .missing: return "Install Local SDXL"
+        case .installed: return "Local SDXL ready"
+        }
+    }
+
+    private var localModelStatusMessage: String {
+        switch localModelInstaller.state {
+        case .downloading:
+            return "Keep the app open while the 3GB Core ML model downloads."
+        case .unpacking:
+            return "Unzipping the model. First generation will compile Core ML assets."
+        case .failed(let message):
+            return message.isEmpty ? "Retry after checking connection and free storage." : message
+        case .missing:
+            return "Local generation needs about 10GB free for download, extraction, and first compile."
+        case .installed:
+            return "Ready for on-device generation."
+        }
+    }
+
+    @ViewBuilder
+    private var localModelStatusAction: some View {
+        switch localModelInstaller.state {
+        case .downloading, .unpacking:
+            Button("Cancel", role: .destructive) {
+                localModelInstaller.cancel()
+            }
+            .buttonStyle(.bordered)
+        case .missing:
+            Button("Install") {
+                localModelInstaller.install()
+            }
+            .buttonStyle(.borderedProminent)
+        case .failed:
+            Button("Retry") {
+                localModelInstaller.install()
+            }
+            .buttonStyle(.borderedProminent)
+        case .installed:
+            EmptyView()
         }
     }
 

@@ -23,6 +23,8 @@ enum LocalModelInstallState: Equatable {
 
 @MainActor
 final class LocalModelInstallerStore: ObservableObject {
+    static let requiredFreeBytes: Int64 = 10 * 1024 * 1024 * 1024
+
     @Published private(set) var state: LocalModelInstallState
 
     private let modelStore: LocalStableDiffusionModelStore
@@ -72,6 +74,7 @@ final class LocalModelInstallerStore: ObservableObject {
         }
         let parentURL = targetURL.deletingLastPathComponent()
         try fileManager.createDirectory(at: parentURL, withIntermediateDirectories: true)
+        try checkAvailableStorage(at: parentURL)
 
         let stagingURL = parentURL
             .appendingPathComponent(".install-\(UUID().uuidString)", isDirectory: true)
@@ -106,6 +109,22 @@ final class LocalModelInstallerStore: ObservableObject {
         #else
         throw GenerationError.localEngineUnavailable
         #endif
+    }
+
+
+    private func checkAvailableStorage(at url: URL) throws {
+        let values = try url.resourceValues(forKeys: [
+            .volumeAvailableCapacityForImportantUsageKey,
+            .volumeAvailableCapacityKey
+        ])
+        let generalCapacity = values.volumeAvailableCapacity.map(Int64.init)
+        let available = values.volumeAvailableCapacityForImportantUsage ?? generalCapacity ?? 0
+        guard available >= Self.requiredFreeBytes else {
+            let availableGB = Double(max(available, 0)) / 1_073_741_824
+            throw GenerationError.localModelStorageTooLow(
+                "Local SDXL needs about 10 GB free. This device currently reports \(String(format: "%.1f", availableGB)) GB available."
+            )
+        }
     }
 
     private func resolvedModelFolder(in extractedURL: URL) throws -> URL {
