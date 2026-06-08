@@ -14,6 +14,7 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
     case requestTimedOut
     case rateLimited
     case unauthorized
+    case insufficientCredits(String)
     case unsupportedModel(String)
     case providerUnavailable(String)
     case server(String)
@@ -41,6 +42,8 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
             return "You have reached the current generation limit. Try again later."
         case .unauthorized:
             return "The image service is not authorized. Contact support."
+        case .insufficientCredits(let message):
+            return message.isEmpty ? "The Puter account for this build has insufficient credits." : message
         case .unsupportedModel(let message):
             return message.isEmpty ? "That model is not available yet." : message
         case .providerUnavailable(let message):
@@ -60,6 +63,8 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         switch self {
         case .rateLimited:
             return "Lower quality or wait for the limit window to reset."
+        case .insufficientCredits:
+            return "Use a Puter account/session with available credits, or switch this app to Puter's user-pays flow."
         case .invalidEndpoint:
             return "Install a build with the deployed image API URL."
         case .providerUnavailable, .networkUnavailable, .requestTimedOut:

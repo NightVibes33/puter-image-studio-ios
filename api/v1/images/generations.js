@@ -63,6 +63,13 @@ function normalizeRequest(body) {
   };
 }
 
+function providerErrorMessage(parsed) {
+  if (typeof parsed?.error === 'string') return parsed.error;
+  if (typeof parsed?.error?.message === 'string') return parsed.error.message;
+  if (typeof parsed?.message === 'string') return parsed.message;
+  return JSON.stringify(parsed).slice(0, 500);
+}
+
 function callPuterGenerate(params, token) {
   const body = JSON.stringify({
     interface: 'puter-image-generation',
@@ -105,7 +112,9 @@ function callPuterGenerate(params, token) {
         }
 
         if (response.statusCode < 200 || response.statusCode >= 300 || parsed.success !== true) {
-          reject(new Error(`Puter HTTP ${response.statusCode}: ${JSON.stringify(parsed).slice(0, 500)}`));
+          const error = new Error(`Puter HTTP ${response.statusCode}: ${providerErrorMessage(parsed)}`);
+          error.statusCode = response.statusCode;
+          reject(error);
           return;
         }
 
@@ -171,6 +180,10 @@ module.exports = async function handler(req, res) {
       data: [item],
     });
   } catch (error) {
-    sendError(res, 502, 'Image generation failed', error.message);
+    const status = Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode < 600
+      ? error.statusCode
+      : 502;
+    const message = status === 402 ? 'Puter account has insufficient credits' : 'Image generation failed';
+    sendError(res, status, message, error.message);
   }
 };

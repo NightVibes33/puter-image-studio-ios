@@ -93,6 +93,10 @@ final class PuterAPIImageGenerationClient: ImageGenerationClient {
             .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             .joined(separator: " ")
 
+        if statusCode == 402 || combined.contains("insufficient credits") {
+            return .insufficientCredits(displayMessage)
+        }
+
         if combined.contains("model") && (combined.contains("unsupported") || combined.contains("not available")) {
             return .unsupportedModel(displayMessage.isEmpty ? "That model is not available yet." : displayMessage)
         }
