@@ -13,7 +13,7 @@ Image Studio is a native SwiftUI app. It opens directly to the image generator a
 
 ## Backend
 
-Debug builds call the local development API at `http://127.0.0.1:8787`. Release builds must be pointed at the deployed HTTPS API by replacing `https://api.your-domain.example` in `project.yml`.
+Debug builds call the local development API at `http://127.0.0.1:8787`. Release builds must be pointed at the deployed HTTPS API by setting the `IMAGE_API_BASE_URL` build setting; the GitHub workflow requires the repository variable before it publishes an IPA.
 
 The iOS app calls only the custom API endpoint:
 

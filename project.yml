@@ -33,7 +33,7 @@ targets:
         Debug:
           IMAGE_API_BASE_URL: http://127.0.0.1:8787
         Release:
-          IMAGE_API_BASE_URL: https://api.your-domain.example
+          IMAGE_API_BASE_URL: ""
     scheme:
       testTargets:
         - PuterImageStudioTests

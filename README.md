@@ -11,7 +11,7 @@ node --no-jitless /root/puter-api-proof/server.js
 curl http://127.0.0.1:8787/health
 ```
 
-Debug builds use `http://127.0.0.1:8787` through the `IMAGE_API_BASE_URL` build setting. Release builds are configured for `https://api.your-domain.example`; replace that with the deployed HTTPS API before TestFlight or App Store review.
+Debug builds use `http://127.0.0.1:8787` through the `IMAGE_API_BASE_URL` build setting. Release packaging now requires `IMAGE_API_BASE_URL` to be supplied as a real deployed HTTPS endpoint; CI fails before building if the repository variable is missing.
 
 The app never calls `api.puter.com` and does not contain `PUTER_AUTH_TOKEN`. The token stays in the server process.
 
@@ -42,10 +42,9 @@ Build with Xcode 15+ or newer. This iSH runtime currently exposes Litter BuildKi
 
 ## Production Checklist
 
-- Deploy the API behind HTTPS and update `IMAGE_API_BASE_URL` for Release.
+- Deploy the API behind HTTPS and set the GitHub repository variable `IMAGE_API_BASE_URL` before publishing a Release IPA.
 - Add backend rate limiting by anonymous device ID and IP.
 - Keep model allowlists and final provider names backend-owned.
-- Add real privacy policy and terms URLs in `AppSettingsStore`.
 - Replace placeholder app icon assets before TestFlight.
 - Run on iPhone SE and a large iPhone with light mode, dark mode, Dynamic Type, and VoiceOver.
 

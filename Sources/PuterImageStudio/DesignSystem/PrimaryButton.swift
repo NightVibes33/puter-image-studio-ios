@@ -15,12 +15,12 @@ struct PrimaryButton: View {
                         .tint(.white)
                 } else if let systemImage {
                     Image(systemName: systemImage)
-                        .font(.headline)
+                        .font(.system(size: 20, weight: .semibold))
                 }
                 Text(title)
-                    .font(.headline)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                    .minimumScaleFactor(0.70)
             }
             .frame(maxWidth: .infinity, minHeight: AppTheme.controlHeight)
             .foregroundStyle(.white)

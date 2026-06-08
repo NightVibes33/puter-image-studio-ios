@@ -30,7 +30,7 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .promptTooLong(let maxCharacters):
             return "Keep prompts under \(maxCharacters) characters."
         case .invalidEndpoint:
-            return "The image service URL is not configured correctly."
+            return "API not configured."
         case .invalidResponse:
             return "The image service returned an unreadable response."
         case .invalidImageURL:
@@ -38,7 +38,7 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .downloadFailed:
             return "The image was created, but the download failed. Try again."
         case .networkUnavailable:
-            return "The network is unavailable. Check your connection and retry."
+            return "Network unavailable."
         case .requestTimedOut:
             return "Generation is taking too long. Try again in a moment."
         case .rateLimited:
@@ -68,8 +68,10 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
             return "Keep the idea, but remove wording that might be read as unsafe or explicit."
         case .rateLimited:
             return "Lower quality or wait for the limit window to reset."
+        case .invalidEndpoint:
+            return "Install a build with the deployed image API URL."
         case .providerUnavailable, .networkUnavailable, .requestTimedOut:
-            return "Your prompt is preserved so you can retry."
+            return "Check the API URL or connection, then retry."
         default:
             return nil
         }

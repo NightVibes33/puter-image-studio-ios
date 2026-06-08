@@ -12,9 +12,9 @@ final class AppSettingsStore: ObservableObject {
     }
 
     let promptMaxCharacters = 1_600
-    let privacyPolicyURL = URL(string: "https://your-domain.example/privacy")!
-    let termsURL = URL(string: "https://your-domain.example/terms")!
-    let supportEmail = "support@your-domain.example"
+    let privacyPolicyURL = URL(string: "https://github.com/NightVibes33/puter-image-studio-ios/blob/main/PRIVACY.md")!
+    let termsURL = URL(string: "https://github.com/NightVibes33/puter-image-studio-ios/blob/main/TERMS.md")!
+    let supportURL = URL(string: "https://github.com/NightVibes33/puter-image-studio-ios/issues")!
 
     private let userDefaults: UserDefaults
 

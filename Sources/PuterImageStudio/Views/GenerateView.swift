@@ -107,16 +107,18 @@ struct GenerateView: View {
 
     private var topBar: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("Image Studio")
-                    .font(.largeTitle.bold())
-                    .minimumScaleFactor(0.78)
+                    .font(.system(size: 32, weight: .heavy, design: .rounded))
+                    .minimumScaleFactor(0.60)
                     .lineLimit(1)
-                Text("Instant AI images")
-                    .font(.subheadline)
+                    .allowsTightening(true)
+                Text("AI image studio")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(AppTheme.secondaryInk)
+                    .lineLimit(1)
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
             IconButton(systemName: "square.grid.2x2", title: "Gallery") {
                 showGallery = true
             }
@@ -150,7 +152,7 @@ struct GenerateView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 310)
+            .frame(minHeight: 260)
             .background(AppTheme.panelBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
 
@@ -177,7 +179,7 @@ struct GenerateView: View {
             VStack(spacing: 6) {
                 Text("Create an image")
                     .font(.title3.bold())
-                Text("Start with a prompt, choose a style, then generate.")
+                Text("Prompt, style, generate.")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.secondaryInk)
                     .multilineTextAlignment(.center)

@@ -27,11 +27,15 @@ final class AppEnvironment: ObservableObject {
         let imageDownloadClient = ImageDownloadClient()
         let settingsStore = AppSettingsStore()
         let historyStore = GenerationHistoryStore(imageDownloadClient: imageDownloadClient)
-        let baseURL = AppEnvironment.imageAPIBaseURL()
-        let client = PuterAPIImageGenerationClient(
-            baseURL: baseURL,
-            imageDownloadClient: imageDownloadClient
-        )
+        let client: ImageGenerationClient
+        if let baseURL = AppEnvironment.imageAPIBaseURL() {
+            client = PuterAPIImageGenerationClient(
+                baseURL: baseURL,
+                imageDownloadClient: imageDownloadClient
+            )
+        } else {
+            client = UnavailableImageGenerationClient(error: .invalidEndpoint)
+        }
 
         return AppEnvironment(
             imageClient: client,
@@ -55,17 +59,32 @@ final class AppEnvironment: ObservableObject {
         )
     }
 
-    private static func imageAPIBaseURL() -> URL {
+    private static func imageAPIBaseURL() -> URL? {
         if let rawValue = Bundle.main.object(forInfoDictionaryKey: "IMAGE_API_BASE_URL") as? String,
-           rawValue.contains("://"),
-           let url = URL(string: rawValue) {
+           let url = validatedBaseURL(rawValue) {
             return url
         }
 
         #if DEBUG
         return URL(string: "http://127.0.0.1:8787")!
         #else
-        return URL(string: "https://api.your-domain.example")!
+        return nil
         #endif
+    }
+
+    private static func validatedBaseURL(_ rawValue: String) -> URL? {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let unresolvedBuildSettingPrefix = "$" + String(UnicodeScalar(40)!)
+        guard !trimmed.isEmpty,
+              !trimmed.contains(unresolvedBuildSettingPrefix),
+              !trimmed.contains(".example"),
+              !trimmed.contains(".invalid"),
+              let url = URL(string: trimmed),
+              url.scheme == "http" || url.scheme == "https",
+              url.host?.isEmpty == false else {
+            return nil
+        }
+
+        return url
     }
 }

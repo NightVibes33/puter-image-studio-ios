@@ -25,6 +25,7 @@ env:
   IPA_NAME: ImageStudio-unsigned.ipa
   PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudio
   IOS_DEPLOYMENT_TARGET: '26.0'
+  IMAGE_API_BASE_URL: ${{ vars.IMAGE_API_BASE_URL }}
 
 jobs:
   build:
@@ -63,6 +64,14 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "build=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "Resolved tag=$TAG_NAME version=$VERSION build=${GITHUB_RUN_NUMBER}"
+
+      - name: Validate release API URL
+        run: |
+          set -euo pipefail
+          if [[ -z "${IMAGE_API_BASE_URL:-}" || "${IMAGE_API_BASE_URL}" != https://* || "${IMAGE_API_BASE_URL}" == *.example* || "${IMAGE_API_BASE_URL}" == *.invalid* ]]; then
+            echo "::error::Set repository variable IMAGE_API_BASE_URL to the deployed HTTPS image API before publishing an IPA."
+            exit 1
+          fi
 
       - name: Generate Xcode project
         run: xcodegen generate

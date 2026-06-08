@@ -43,7 +43,7 @@ struct SettingsView: View {
                 }
 
                 Section("Support") {
-                    Link(settingsStore.supportEmail, destination: URL(string: "mailto:\(settingsStore.supportEmail)")!)
+                    Link("GitHub Issues", destination: settingsStore.supportURL)
                     HStack {
                         Text("Version")
                         Spacer()
