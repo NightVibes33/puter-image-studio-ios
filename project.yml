@@ -23,6 +23,10 @@ targets:
       path: Sources/PuterImageStudio/App/Info.plist
       properties:
         CFBundleDisplayName: Image Studio
+        CFBundleURLTypes:
+          - CFBundleURLName: com.nightvibes.imagestudio
+            CFBundleURLSchemes:
+              - imagestudio
         IMAGE_API_BASE_URL: $(IMAGE_API_BASE_URL)
         NSPhotoLibraryAddUsageDescription: Image Studio saves generated artwork only when you tap Save.
         NSAppTransportSecurity:

@@ -4,6 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject private var settingsStore: AppSettingsStore
     @EnvironmentObject private var historyStore: GenerationHistoryStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var showClearConfirmation = false
 
     var body: some View {
@@ -30,19 +31,29 @@ struct SettingsView: View {
                 }
 
                 Section("Puter Account") {
-                    SecureField("Auth token", text: $settingsStore.userPuterAuthToken)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .privacySensitive()
+                    if settingsStore.hasUserPuterToken {
+                        Label(settingsStore.userPuterUsername.isEmpty ? "Connected" : "Connected as \(settingsStore.userPuterUsername)", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(AppTheme.success)
 
-                    if !settingsStore.userPuterAuthToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Button("Clear Puter Token", role: .destructive) {
-                            settingsStore.userPuterAuthToken = ""
+                        Button("Disconnect Puter", role: .destructive) {
+                            settingsStore.clearPuterConnection()
+                        }
+                    } else {
+                        Button {
+                            openURL(settingsStore.puterAuthURL)
+                        } label: {
+                            Label("Connect Puter", systemImage: "person.crop.circle.badge.checkmark")
                         }
                     }
 
-                    Link("Copy token from Puter dashboard", destination: URL(string: "https://puter.com/dashboard#account")!)
-                    Text("Using your own Puter token avoids the shared server token and lets Puter bill usage to your Puter account/session.")
+                    DisclosureGroup("Advanced token") {
+                        SecureField("Auth token", text: $settingsStore.userPuterAuthToken)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .privacySensitive()
+                    }
+
+                    Text("Connect Puter so generation runs on the signed-in user's Puter session instead of the shared server token.")
                         .font(.caption)
                         .foregroundStyle(AppTheme.secondaryInk)
                 }

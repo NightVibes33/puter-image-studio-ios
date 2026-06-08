@@ -392,6 +392,10 @@ struct GenerateView: View {
             error = .emptyPrompt
             return
         }
+        guard settingsStore.hasUserPuterToken else {
+            error = .missingPuterConnection
+            return
+        }
         generationTask?.cancel()
         isPromptFocused = false
         error = nil

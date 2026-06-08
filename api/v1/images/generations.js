@@ -164,9 +164,9 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const token = getUserPuterToken(req) || process.env.PUTER_AUTH_TOKEN;
+  const token = getUserPuterToken(req);
   if (!token) {
-    sendError(res, 500, 'Puter token is not configured');
+    sendError(res, 401, 'Connect Puter to generate images', 'Image Studio requires a signed-in Puter session so generation is free for the developer.');
     return;
   }
 

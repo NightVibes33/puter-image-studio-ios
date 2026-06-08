@@ -2,6 +2,7 @@
   "version": 2,
   "rewrites": [
     { "source": "/health", "destination": "/api/health" },
+    { "source": "/puter-auth", "destination": "/api/puter-auth" },
     { "source": "/v1/images/generations", "destination": "/api/v1/images/generations" }
   ],
   "functions": {
