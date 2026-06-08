@@ -4,7 +4,7 @@ Native SwiftUI image-generation app with a local-first Core ML SDXL path and opt
 
 ## Local SDXL / Apple Neural Engine
 
-The Local SDXL model is the same class of setup described by LocalGen-style Reddit posts: Apple Core ML Stable Diffusion running on device with `.cpuAndNeuralEngine`, `SPLIT_EINSUM` attention, and reduced-memory loading. The app does not commit model weights. Install or ship the extracted Hugging Face folder below as either a bundled resource or under `Application Support/LocalModels/`:
+The Local SDXL model is the same class of setup described by LocalGen-style Reddit posts: Apple Core ML Stable Diffusion running on device with `.cpuAndNeuralEngine`, `SPLIT_EINSUM` attention, and reduced-memory loading. The app does not commit model weights. Users can install the model from Settings, or you can ship the extracted Hugging Face folder below as a bundled resource under `Application Support/LocalModels/`:
 
 ```text
 coreml-stable-diffusion-xl-base-ios_split_einsum_compiled
@@ -61,7 +61,7 @@ Build with Xcode 15+ or newer. This iSH runtime currently exposes Litter BuildKi
 
 ## Production Checklist
 
-- Ship the extracted Local SDXL Core ML model as app resources, Apple-hosted assets, or an in-app managed download before claiming offline generation.
+- Keep the in-app Local SDXL installer working, or ship the extracted model as app resources / Apple-hosted assets before claiming offline generation.
 - Deploy the API behind HTTPS and set the GitHub repository variable `IMAGE_API_BASE_URL` only if cloud fallback remains enabled.
 - For local-only sideload testing, run `/root/puter-api-proof/server.js` and build with `api_base_url=http://127.0.0.1:8787`.
 - Add backend rate limiting by anonymous device ID and IP.

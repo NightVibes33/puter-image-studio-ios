@@ -37,7 +37,7 @@ struct LocalStableDiffusionModelStore {
         installedResourceURL() != nil
     }
 
-    private func isUsableResourceDirectory(_ url: URL) -> Bool {
+    func isUsableResourceDirectory(_ url: URL) -> Bool {
         let requiredNames = [
             "VAEDecoder.mlmodelc",
             "vocab.json"

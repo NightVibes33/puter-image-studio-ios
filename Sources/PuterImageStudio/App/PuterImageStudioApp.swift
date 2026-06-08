@@ -10,6 +10,7 @@ struct PuterImageStudioApp: App {
                 .environmentObject(environment)
                 .environmentObject(environment.historyStore)
                 .environmentObject(environment.settingsStore)
+                .environmentObject(environment.localModelInstallerStore)
         }
     }
 }

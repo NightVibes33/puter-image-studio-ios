@@ -17,6 +17,9 @@ packages:
   StableDiffusion:
     url: https://github.com/apple/ml-stable-diffusion.git
     from: 1.1.1
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation.git
+    from: 0.9.19
 targets:
   PuterImageStudio:
     type: application
@@ -26,6 +29,8 @@ targets:
     dependencies:
       - package: StableDiffusion
         product: StableDiffusion
+      - package: ZIPFoundation
+        product: ZIPFoundation
     info:
       path: Sources/PuterImageStudio/App/Info.plist
       properties:

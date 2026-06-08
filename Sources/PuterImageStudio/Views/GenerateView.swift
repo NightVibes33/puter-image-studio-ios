@@ -5,6 +5,7 @@ struct GenerateView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @EnvironmentObject private var historyStore: GenerationHistoryStore
     @EnvironmentObject private var settingsStore: AppSettingsStore
+    @EnvironmentObject private var localModelInstaller: LocalModelInstallerStore
 
     @State private var prompt = ""
     @State private var selectedStyle = StylePreset.defaultPreset
@@ -79,6 +80,7 @@ struct GenerateView: View {
                 SettingsView()
                     .environmentObject(settingsStore)
                     .environmentObject(historyStore)
+                    .environmentObject(localModelInstaller)
             }
             .sheet(isPresented: Binding(
                 get: { shareURL != nil },

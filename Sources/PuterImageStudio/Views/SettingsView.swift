@@ -3,11 +3,10 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var settingsStore: AppSettingsStore
     @EnvironmentObject private var historyStore: GenerationHistoryStore
+    @EnvironmentObject private var localModelInstaller: LocalModelInstallerStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showClearConfirmation = false
-
-    private let localModelStore = LocalStableDiffusionModelStore()
 
     var body: some View {
         NavigationStack {
@@ -33,15 +32,12 @@ struct SettingsView: View {
                 }
 
                 Section("Local Generation") {
-                    Label(
-                        localModelStore.isInstalled() ? "Local SDXL installed" : "Local SDXL model missing",
-                        systemImage: localModelStore.isInstalled() ? "checkmark.circle.fill" : "externaldrive.badge.exclamationmark"
-                    )
-                    .foregroundStyle(localModelStore.isInstalled() ? AppTheme.success : AppTheme.warmAccent)
+                    localGenerationStatus
+                    localGenerationControls
 
-                    Link("Download iOS SDXL Core ML model", destination: LocalStableDiffusionModelStore.downloadURL)
+                    Link("Model source", destination: LocalStableDiffusionModelStore.downloadURL)
 
-                    Text("Use Apple's extracted \(LocalStableDiffusionModelStore.modelFolderName) folder. The local engine needs about \(localModelStore.expectedFreeSpaceDescription) free for download, extraction, and Core ML compilation.")
+                    Text("The app downloads Apple's iOS SDXL Core ML archive, unzips it into Application Support, then Core ML compiles it on first use. Keep about 10 GB free.")
                         .font(.caption)
                         .foregroundStyle(AppTheme.secondaryInk)
                 }
@@ -108,6 +104,57 @@ struct SettingsView: View {
                     historyStore.clear()
                 }
                 Button("Cancel", role: .cancel) {}
+            }
+        }
+    }
+
+
+    @ViewBuilder
+    private var localGenerationStatus: some View {
+        switch localModelInstaller.state {
+        case .installed:
+            Label("Local SDXL installed", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(AppTheme.success)
+        case .downloading:
+            Label("Downloading local SDXL model", systemImage: "arrow.down.circle")
+                .foregroundStyle(AppTheme.accent)
+        case .unpacking:
+            Label("Unpacking local SDXL model", systemImage: "archivebox")
+                .foregroundStyle(AppTheme.accent)
+        case .failed(let message):
+            Label(message.isEmpty ? "Local model install failed" : message, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(AppTheme.warmAccent)
+        case .missing:
+            Label("Local SDXL model missing", systemImage: "externaldrive.badge.exclamationmark")
+                .foregroundStyle(AppTheme.warmAccent)
+        }
+    }
+
+    @ViewBuilder
+    private var localGenerationControls: some View {
+        switch localModelInstaller.state {
+        case .installed:
+            Button("Check Model") {
+                localModelInstaller.refresh()
+            }
+        case .downloading, .unpacking:
+            HStack {
+                ProgressView()
+                Button("Cancel", role: .destructive) {
+                    localModelInstaller.cancel()
+                }
+            }
+        case .missing:
+            Button {
+                localModelInstaller.install()
+            } label: {
+                Label("Install Local SDXL", systemImage: "arrow.down.circle")
+            }
+        case .failed:
+            Button {
+                localModelInstaller.install()
+            } label: {
+                Label("Retry Install", systemImage: "arrow.clockwise")
             }
         }
     }

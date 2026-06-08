@@ -8,25 +8,29 @@ final class AppEnvironment: ObservableObject {
     let photoLibrarySaver: PhotoLibrarySaver
     let historyStore: GenerationHistoryStore
     let settingsStore: AppSettingsStore
+    let localModelInstallerStore: LocalModelInstallerStore
 
     init(
         imageClient: ImageGenerationClient,
         imageDownloadClient: ImageDownloadClient,
         photoLibrarySaver: PhotoLibrarySaver,
         historyStore: GenerationHistoryStore,
-        settingsStore: AppSettingsStore
+        settingsStore: AppSettingsStore,
+        localModelInstallerStore: LocalModelInstallerStore
     ) {
         self.imageClient = imageClient
         self.imageDownloadClient = imageDownloadClient
         self.photoLibrarySaver = photoLibrarySaver
         self.historyStore = historyStore
         self.settingsStore = settingsStore
+        self.localModelInstallerStore = localModelInstallerStore
     }
 
     static func live() -> AppEnvironment {
         let imageDownloadClient = ImageDownloadClient()
         let settingsStore = AppSettingsStore()
         let historyStore = GenerationHistoryStore(imageDownloadClient: imageDownloadClient)
+        let localModelInstallerStore = LocalModelInstallerStore()
         let remoteClient: ImageGenerationClient
         if let baseURL = AppEnvironment.imageAPIBaseURL() {
             remoteClient = PuterAPIImageGenerationClient(
@@ -44,7 +48,8 @@ final class AppEnvironment: ObservableObject {
             imageDownloadClient: imageDownloadClient,
             photoLibrarySaver: PhotoLibrarySaver(),
             historyStore: historyStore,
-            settingsStore: settingsStore
+            settingsStore: settingsStore,
+            localModelInstallerStore: localModelInstallerStore
         )
     }
 
@@ -52,12 +57,14 @@ final class AppEnvironment: ObservableObject {
         let imageDownloadClient = ImageDownloadClient()
         let settingsStore = AppSettingsStore(userDefaults: .standard)
         let historyStore = GenerationHistoryStore(imageDownloadClient: imageDownloadClient)
+        let localModelInstallerStore = LocalModelInstallerStore()
         return AppEnvironment(
             imageClient: MockImageGenerationClient(imageDownloadClient: imageDownloadClient),
             imageDownloadClient: imageDownloadClient,
             photoLibrarySaver: PhotoLibrarySaver(),
             historyStore: historyStore,
-            settingsStore: settingsStore
+            settingsStore: settingsStore,
+            localModelInstallerStore: localModelInstallerStore
         )
     }
 
