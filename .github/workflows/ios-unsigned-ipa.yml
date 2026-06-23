@@ -137,6 +137,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ steps.meta.outputs.tag }}
+          APP_NAME: Alley Cãt
         run: |
           set -euo pipefail
           if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
@@ -150,3 +151,11 @@ jobs:
             build/AppIcon.png \
             build/source-url.txt \
             --clobber
+
+      - name: Publish unsigned IPA release asset
+        run: |
+          ./tools/scripts/verify-kittystore-integration.sh \
+            --require-screenshots \
+            --max-news-items 3 \
+            --app-name "$APP_NAME" \
+            --store-config '{"name": "KittyStore"}'
