@@ -14,7 +14,7 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
     case requestTimedOut
     case rateLimited
     case unauthorized
-    case missingPuterConnection
+    case missingLocalConnection
     case localModelMissing
     case localModelStorageTooLow(String)
     case localEngineUnavailable
@@ -46,8 +46,8 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
             return "You have reached the current generation limit. Try again later."
         case .unauthorized:
             return "The image service is not authorized. Contact support."
-        case .missingPuterConnection:
-            return "Connect Puter before using cloud image models."
+        case .missingLocalConnection:
+            return "Connect Local before using cloud image models."
         case .localModelMissing:
             return "Install the local SDXL model before generating offline."
         case .localModelStorageTooLow(let message):
@@ -55,7 +55,7 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .localEngineUnavailable:
             return "This build does not include the local Core ML Stable Diffusion engine."
         case .insufficientCredits(let message):
-            return message.isEmpty ? "The Puter account for this build has insufficient credits." : message
+            return message.isEmpty ? "The Local account for this build has insufficient credits." : message
         case .unsupportedModel(let message):
             return message.isEmpty ? "That model is not available yet." : message
         case .providerUnavailable(let message):
@@ -75,8 +75,8 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         switch self {
         case .rateLimited:
             return "Lower quality or wait for the limit window to reset."
-        case .missingPuterConnection:
-            return "Open Settings and connect Puter, or switch back to Local SDXL."
+        case .missingLocalConnection:
+            return "Open Settings and connect Local, or switch back to Local SDXL."
         case .localModelMissing:
             return "Open Settings and install Local SDXL."
         case .localModelStorageTooLow:
@@ -84,7 +84,7 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .localEngineUnavailable:
             return "Add the StableDiffusion Swift package to this build."
         case .insufficientCredits:
-            return "Use a Puter account/session with available credits."
+            return "Use a Local account/session with available credits."
         case .invalidEndpoint:
             return "Install a build with the deployed image API URL."
         case .providerUnavailable, .networkUnavailable, .requestTimedOut:
