@@ -16,27 +16,23 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         backendModel == LocalStableDiffusionModelStore.backendModelID
     }
 
+    // MARK: - Presets
+    // Local SDXL is first and is the fallback — no cloud credentials needed.
+    // Cloud models follow; "Cloud Auto" is intentionally removed to avoid
+    // a duplicate backendModel that confuses the user (fix #8).
     static let presets: [ImageModel] = [
         ImageModel(
             id: "local-sdxl",
             title: "Local SDXL",
-            subtitle: "On-device, no credits",
+            subtitle: "On-device · no credits needed",
             backendModel: LocalStableDiffusionModelStore.backendModelID,
             defaultQuality: nil,
             supportedQualities: []
         ),
         ImageModel(
-            id: "auto",
-            title: "Cloud Auto",
-            subtitle: "Online fallback",
-            backendModel: "gpt-image-2",
-            defaultQuality: .low,
-            supportedQualities: [.low]
-        ),
-        ImageModel(
             id: "gpt-image-2",
             title: "GPT Image 2",
-            subtitle: "Balanced detail",
+            subtitle: "Balanced detail (cloud)",
             backendModel: "gpt-image-2",
             defaultQuality: .low,
             supportedQualities: [.low, .medium, .high]
@@ -44,7 +40,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         ImageModel(
             id: "gemini-image",
             title: "Gemini Image",
-            subtitle: "Fast creative draft",
+            subtitle: "Fast creative draft (cloud)",
             backendModel: "gemini-2.5-flash-image-preview",
             defaultQuality: nil,
             supportedQualities: []
@@ -52,7 +48,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         ImageModel(
             id: "flux-schnell",
             title: "Flux Schnell",
-            subtitle: "Quick stylized output",
+            subtitle: "Quick stylized output (cloud)",
             backendModel: "black-forest-labs/flux-schnell",
             defaultQuality: nil,
             supportedQualities: []
@@ -60,7 +56,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         ImageModel(
             id: "dall-e-3",
             title: "DALL-E 3",
-            subtitle: "Prompt faithful",
+            subtitle: "Prompt faithful (cloud)",
             backendModel: "dall-e-3",
             defaultQuality: .standard,
             supportedQualities: [.standard, .hd]
@@ -68,7 +64,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         ImageModel(
             id: "sdxl",
             title: "SDXL",
-            subtitle: "Open style range",
+            subtitle: "Open style range (cloud)",
             backendModel: "stabilityai/stable-diffusion-xl-base-1.0",
             defaultQuality: nil,
             supportedQualities: []
@@ -76,7 +72,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
     ]
 
     static var fallback: ImageModel {
-        presets[0]
+        presets[0] // Local SDXL — never requires credentials
     }
 
     static func preset(id: String) -> ImageModel {
@@ -95,11 +91,11 @@ enum ImageQuality: String, Codable, CaseIterable, Identifiable, Hashable, Sendab
 
     var title: String {
         switch self {
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
+        case .low:      return "Low"
+        case .medium:   return "Medium"
+        case .high:     return "High"
         case .standard: return "Standard"
-        case .hd: return "HD"
+        case .hd:       return "HD"
         }
     }
 }

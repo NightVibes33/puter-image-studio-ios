@@ -12,6 +12,12 @@ struct GeneratedImage: Identifiable, Codable, Equatable, Hashable, Sendable {
     var remoteURL: URL?
     var localFileName: String
 
+    /// Typed model resolved from the stored model ID string.
+    /// Falls back to `ImageModel.fallback` for records written before a model was removed.
+    var resolvedModel: ImageModel {
+        ImageModel.preset(id: model)
+    }
+
     init(
         id: UUID = UUID(),
         prompt: String,

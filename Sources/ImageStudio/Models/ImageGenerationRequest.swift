@@ -2,6 +2,7 @@ import Foundation
 
 struct ImageGenerationRequest: Codable, Equatable, Sendable {
     var prompt: String
+    var negativePrompt: String?
     var model: String
     var quality: String?
     var width: Int
@@ -15,6 +16,7 @@ struct ImageGenerationRequest: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case prompt
+        case negativePrompt = "negative_prompt"
         case model
         case quality
         case width
@@ -24,6 +26,7 @@ struct ImageGenerationRequest: Codable, Equatable, Sendable {
 
     init(
         prompt: String,
+        negativePrompt: String? = nil,
         model: String,
         quality: String?,
         width: Int,
@@ -31,6 +34,7 @@ struct ImageGenerationRequest: Codable, Equatable, Sendable {
         responseFormat: ResponseFormat = .url
     ) {
         self.prompt = prompt
+        self.negativePrompt = negativePrompt
         self.model = model
         self.quality = quality
         self.width = width
