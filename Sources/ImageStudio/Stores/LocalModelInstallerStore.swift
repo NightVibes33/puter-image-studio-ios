@@ -1,5 +1,9 @@
 import Foundation
 
+// StableDiffusion SPM package is intentionally excluded from the CI build.
+// ZIPFoundation is retained for the model download/unzip flow.
+// All StableDiffusion usage is behind #if canImport(StableDiffusion) in the generation client.
+
 #if canImport(ZIPFoundation)
 import ZIPFoundation
 #endif
@@ -110,7 +114,6 @@ final class LocalModelInstallerStore: ObservableObject {
         throw GenerationError.localEngineUnavailable
         #endif
     }
-
 
     private func checkAvailableStorage(at url: URL) throws {
         let values = try url.resourceValues(forKeys: [

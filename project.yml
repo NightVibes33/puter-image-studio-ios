@@ -14,9 +14,6 @@ configs:
   Debug: debug
   Release: release
 packages:
-  StableDiffusion:
-    url: https://github.com/apple/ml-stable-diffusion.git
-    from: 1.1.1
   ZIPFoundation:
     url: https://github.com/weichsel/ZIPFoundation.git
     from: 0.9.19
@@ -27,8 +24,6 @@ targets:
     sources:
       - path: Sources/ImageStudio
     dependencies:
-      - package: StableDiffusion
-        product: StableDiffusion
       - package: ZIPFoundation
         product: ZIPFoundation
     info:

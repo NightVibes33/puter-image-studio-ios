@@ -18,7 +18,6 @@ jobs:
 
       - name: Select latest available Xcode
         run: |
-          # Pick highest-versioned Xcode available on the runner
           XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           echo "Using Xcode: $XCODE"
           sudo xcode-select -s "$XCODE/Contents/Developer"
@@ -30,6 +29,13 @@ jobs:
 
       - name: Generate Xcode project
         run: xcodegen generate
+
+      - name: Resolve SPM packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project ImageStudio.xcodeproj \
+            -scheme ImageStudio \
+            -clonedSourcePackagesDirPath .spm-cache
 
       - name: Build unsigned IPA
         id: build_ipa
