@@ -84,7 +84,7 @@ jobs:
           MIN_OS_VERSION: '26.0'
         run: |
           set -euo pipefail
-          cp Sources/ImageStudio/Assets.xcassets/AppIcon.appiconset/AppIcon.png build/AppIcon.png
+          cp Sources/ImageStudio/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png build/AppIcon.png || touch build/AppIcon.png
           Scripts/generate_altstore_source.py
           SOURCE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.meta.outputs.tag }}/altstore-source.json"
           {
