@@ -10,7 +10,7 @@ struct GenerateView: View {
     @State private var prompt = ""
     @State private var negativePrompt = ""
     @State private var showNegativePrompt = false
-    @State private var seed: String = ""              // empty = random
+    @State private var seed: String = ""
     @State private var stepCount: Int = LocalSDXLDefaults.stepCount
     @State private var guidanceScale: Float = LocalSDXLDefaults.guidanceScale
     @State private var showAdvanced = false
@@ -54,14 +54,12 @@ struct GenerateView: View {
                                 savedBanner(savedMessage)
                             }
 
-                            // Local model status card (only when local model selected)
                             if selectedModel.isLocal {
                                 localModelStatusCard
                             }
 
                             promptSurface
 
-                            // Advanced local options (seed, steps, guidance, neg prompt)
                             if selectedModel.isLocal && showAdvanced {
                                 advancedLocalOptions
                             }
@@ -178,7 +176,7 @@ struct GenerateView: View {
                 .frame(maxWidth: .infinity, minHeight: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(alignment: .bottomTrailing) {
-                    Text("\(currentImage.width) × \(currentImage.height)")
+                    Text("\(currentImage.width) \u00d7 \(currentImage.height)")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 9).padding(.vertical, 6)
@@ -202,6 +200,12 @@ struct GenerateView: View {
 
     // MARK: - Local model status card
 
+    /// Extracts overallProgress from the .active case; returns 0 for all other states.
+    private var localModelOverallProgress: Double {
+        if case .active(_, _, let overall, _, _) = localModelInstaller.state { return overall }
+        return 0
+    }
+
     private var localModelStatusCard: some View {
         HStack(alignment: .center, spacing: 12) {
             ZStack {
@@ -210,11 +214,11 @@ struct GenerateView: View {
                         .stroke(Color.white.opacity(0.12), lineWidth: 3)
                         .frame(width: 36, height: 36)
                     Circle()
-                        .trim(from: 0, to: localModelInstaller.state.overallProgress)
+                        .trim(from: 0, to: localModelOverallProgress)
                         .stroke(localModelStatusTint, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         .frame(width: 36, height: 36)
-                        .animation(.linear(duration: 0.3), value: localModelInstaller.state.overallProgress)
+                        .animation(.linear(duration: 0.3), value: localModelOverallProgress)
                 }
                 Image(systemName: localModelStatusIcon)
                     .font(.system(size: localModelInstaller.state.isBusy ? 13 : 18, weight: .bold))
@@ -279,15 +283,15 @@ struct GenerateView: View {
         switch localModelInstaller.state {
         case .missing:
             if let entry = localModelInstaller.modelEntry {
-                return "Requires \(entry.requiredFreeSpaceDescription) free · On-device, no credits."
+                return "Requires \(entry.requiredFreeSpaceDescription) free \u00b7 On-device, no credits."
             }
             return "Tap to install the local model."
         case .active(_, _, let overall, let speed, let eta):
             let pct = Int(overall * 100)
             if let eta {
-                return "\(pct)% · \(speedLabel(speed)) · \(etaLabel(eta))"
+                return "\(pct)% \u00b7 \(speedLabel(speed)) \u00b7 \(etaLabel(eta))"
             }
-            return "\(pct)% · \(speedLabel(speed))"
+            return "\(pct)% \u00b7 \(speedLabel(speed))"
         case .installed:
             return "Ready for on-device generation."
         case .failed(let e):
@@ -316,7 +320,6 @@ struct GenerateView: View {
 
     private var promptSurface: some View {
         VStack(spacing: 0) {
-            // Main prompt
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $prompt)
                     .focused($isPromptFocused)
@@ -334,7 +337,6 @@ struct GenerateView: View {
                 }
             }
 
-            // Negative prompt row (local models only)
             if selectedModel.isLocal && showNegativePrompt {
                 Divider().background(.white.opacity(0.10))
                 ZStack(alignment: .topLeading) {
@@ -345,7 +347,7 @@ struct GenerateView: View {
                         .scrollContentBackground(.hidden)
                         .background(.clear)
                     if negativePrompt.isEmpty {
-                        Text("Negative prompt (optional)…")
+                        Text("Negative prompt (optional)\u2026")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.35))
                             .padding(.horizontal, 17).padding(.vertical, 17)
@@ -354,9 +356,7 @@ struct GenerateView: View {
                 }
             }
 
-            // Toolbar row
             HStack(spacing: 8) {
-                // Style picker
                 pickerMenu(title: selectedStyle.title, systemImage: selectedStyle.systemImage) {
                     ForEach(StylePreset.presets) { preset in
                         Button { selectedStyle = preset } label: {
@@ -364,7 +364,6 @@ struct GenerateView: View {
                         }
                     }
                 }
-                // Aspect picker
                 pickerMenu(title: selectedAspect.title, systemImage: selectedAspect.systemImage) {
                     ForEach(AspectPreset.presets) { preset in
                         Button { selectedAspect = preset } label: {
@@ -372,7 +371,6 @@ struct GenerateView: View {
                         }
                     }
                 }
-                // Model picker
                 Menu {
                     ForEach(ImageModel.presets) { model in
                         Button {
@@ -399,12 +397,9 @@ struct GenerateView: View {
                     )
                 }
 
-                // Local-only: neg prompt + advanced toggles
                 if selectedModel.isLocal {
                     Button {
-                        withAnimation(.spring(response: 0.28)) {
-                            showNegativePrompt.toggle()
-                        }
+                        withAnimation(.spring(response: 0.28)) { showNegativePrompt.toggle() }
                     } label: {
                         Image(systemName: showNegativePrompt ? "minus.circle.fill" : "minus.circle")
                             .font(.system(size: 16, weight: .semibold))
@@ -414,9 +409,7 @@ struct GenerateView: View {
                     .accessibilityLabel(showNegativePrompt ? "Hide negative prompt" : "Show negative prompt")
 
                     Button {
-                        withAnimation(.spring(response: 0.28)) {
-                            showAdvanced.toggle()
-                        }
+                        withAnimation(.spring(response: 0.28)) { showAdvanced.toggle() }
                     } label: {
                         Image(systemName: showAdvanced ? "slider.horizontal.3" : "slider.horizontal.below.square.and.square")
                             .font(.system(size: 16, weight: .semibold))
@@ -458,7 +451,6 @@ struct GenerateView: View {
 
     private var advancedLocalOptions: some View {
         VStack(spacing: 12) {
-            // Seed
             HStack {
                 Label("Seed", systemImage: "dice")
                     .font(.caption.weight(.semibold))
@@ -478,7 +470,6 @@ struct GenerateView: View {
                 }
             }
 
-            // Steps
             HStack {
                 Label("Steps  \(stepCount)", systemImage: "repeat")
                     .font(.caption.weight(.semibold))
@@ -490,7 +481,6 @@ struct GenerateView: View {
                 .tint(AppTheme.accent)
             }
 
-            // Guidance scale
             HStack {
                 Label("CFG  \(String(format: "%.1f", guidanceScale))", systemImage: "dial.low")
                     .font(.caption.weight(.semibold))
@@ -704,7 +694,7 @@ struct GenerateView: View {
 private extension LocalModelInstallPhase {
     var displayTitle: String {
         switch self {
-        case .queued:           return "Queued…"
+        case .queued:           return "Queued\u2026"
         case .downloading:      return "Downloading SDXL"
         case .verifyingArchive: return "Verifying archive"
         case .extracting:       return "Extracting model"
@@ -715,7 +705,7 @@ private extension LocalModelInstallPhase {
     }
 }
 
-// MARK: - Quick actions (private)
+// MARK: - Quick actions
 
 private struct QuickActionPreset: Identifiable {
     var id: String
@@ -726,14 +716,14 @@ private struct QuickActionPreset: Identifiable {
     var aspect: AspectPreset
 
     static let defaults: [QuickActionPreset] = [
-        QuickActionPreset(id: "app-icon",  title: "App Icon",     systemImage: "app.badge",               prompt: "Minimal iOS app icon for an AI image studio, glossy dark glass, blue accent, no text",                     style: style("logo"),      aspect: aspect("square")),
-        QuickActionPreset(id: "wallpaper", title: "Wallpaper",    systemImage: "iphone",                  prompt: "Premium iPhone wallpaper, luminous abstract moonlit landscape, deep contrast, no text",                  style: style("wallpaper"), aspect: aspect("wallpaper")),
-        QuickActionPreset(id: "logo",      title: "Logo",         systemImage: "seal",                    prompt: "Clean logo mark for a fast creative AI studio, simple geometry, no text",                               style: style("logo"),      aspect: aspect("square")),
-        QuickActionPreset(id: "product",   title: "Product Shot", systemImage: "shippingbox",             prompt: "Luxury product photo on dark reflective glass, studio lighting, premium composition",                    style: style("realistic"), aspect: aspect("social-4x5")),
-        QuickActionPreset(id: "character", title: "Character",    systemImage: "person.crop.circle",      prompt: "Original heroic character portrait, dramatic lighting, detailed face, cinematic mood",                   style: style("cinematic"), aspect: aspect("social-4x5")),
-        QuickActionPreset(id: "social",    title: "Social Post",  systemImage: "rectangle.portrait",      prompt: "Eye-catching social media artwork, bold central subject, clean negative space, no text",                style: style("cinematic"), aspect: aspect("social-4x5")),
-        QuickActionPreset(id: "render",    title: "3D Render",    systemImage: "cube.transparent",        prompt: "Futuristic 3D object render, polished material, soft studio shadows, high detail",                      style: style("3d"),        aspect: aspect("square")),
-        QuickActionPreset(id: "cinematic", title: "Cinematic",    systemImage: "movieclapper",            prompt: "Cinematic neon city at night, rain, reflections, dramatic film still lighting",                         style: style("cinematic"), aspect: aspect("landscape")),
+        QuickActionPreset(id: "app-icon",  title: "App Icon",     systemImage: "app.badge",          prompt: "Minimal iOS app icon for an AI image studio, glossy dark glass, blue accent, no text",                   style: style("logo"),      aspect: aspect("square")),
+        QuickActionPreset(id: "wallpaper", title: "Wallpaper",    systemImage: "iphone",             prompt: "Premium iPhone wallpaper, luminous abstract moonlit landscape, deep contrast, no text",                style: style("wallpaper"), aspect: aspect("wallpaper")),
+        QuickActionPreset(id: "logo",      title: "Logo",         systemImage: "seal",               prompt: "Clean logo mark for a fast creative AI studio, simple geometry, no text",                             style: style("logo"),      aspect: aspect("square")),
+        QuickActionPreset(id: "product",   title: "Product Shot", systemImage: "shippingbox",        prompt: "Luxury product photo on dark reflective glass, studio lighting, premium composition",                  style: style("realistic"), aspect: aspect("social-4x5")),
+        QuickActionPreset(id: "character", title: "Character",    systemImage: "person.crop.circle", prompt: "Original heroic character portrait, dramatic lighting, detailed face, cinematic mood",                 style: style("cinematic"), aspect: aspect("social-4x5")),
+        QuickActionPreset(id: "social",    title: "Social Post",  systemImage: "rectangle.portrait", prompt: "Eye-catching social media artwork, bold central subject, clean negative space, no text",              style: style("cinematic"), aspect: aspect("social-4x5")),
+        QuickActionPreset(id: "render",    title: "3D Render",    systemImage: "cube.transparent",   prompt: "Futuristic 3D object render, polished material, soft studio shadows, high detail",                    style: style("3d"),        aspect: aspect("square")),
+        QuickActionPreset(id: "cinematic", title: "Cinematic",    systemImage: "movieclapper",       prompt: "Cinematic neon city at night, rain, reflections, dramatic film still lighting",                       style: style("cinematic"), aspect: aspect("landscape")),
     ]
     private static func style(_ id: String) -> StylePreset { StylePreset.presets.first { $0.id == id } ?? StylePreset.defaultPreset }
     private static func aspect(_ id: String) -> AspectPreset { AspectPreset.presets.first { $0.id == id } ?? AspectPreset.fallback }
