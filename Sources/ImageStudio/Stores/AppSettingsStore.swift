@@ -5,8 +5,8 @@ import SwiftUI
 enum AppSettingsKeys {
     static let defaultModelID = "settings.defaultModelID"
     static let defaultQualityRaw = "settings.defaultQualityRaw"
-    static let userPuterUsername = "settings.userPuterUsername"
-    static let userPuterAuthTokenLegacy = "settings.userPuterAuthToken"
+    static let userLocalUsername = "settings.userLocalUsername"
+    static let userLocalAuthTokenLegacy = "settings.userLocalAuthToken"
 }
 
 @MainActor
@@ -19,12 +19,12 @@ final class AppSettingsStore: ObservableObject {
         didSet { userDefaults.set(defaultQualityRaw, forKey: AppSettingsKeys.defaultQualityRaw) }
     }
 
-    @Published var userPuterAuthToken: String {
-        didSet { KeychainStore.set(userPuterAuthToken, for: KeychainStore.puterAuthTokenAccount) }
+    @Published var userLocalAuthToken: String {
+        didSet { KeychainStore.set(userLocalAuthToken, for: KeychainStore.puterAuthTokenAccount) }
     }
 
-    @Published var userPuterUsername: String {
-        didSet { userDefaults.set(userPuterUsername, forKey: AppSettingsKeys.userPuterUsername) }
+    @Published var userLocalUsername: String {
+        didSet { userDefaults.set(userLocalUsername, forKey: AppSettingsKeys.userLocalUsername) }
     }
 
     let privacyPolicyURL = URL(string: "https://github.com/NightVibes33/puter-image-studio-ios/blob/main/PRIVACY.md")!
@@ -37,13 +37,13 @@ final class AppSettingsStore: ObservableObject {
         self.userDefaults = userDefaults
         defaultModelID = userDefaults.string(forKey: AppSettingsKeys.defaultModelID) ?? ImageModel.fallback.id
         defaultQualityRaw = userDefaults.string(forKey: AppSettingsKeys.defaultQualityRaw) ?? ImageQuality.low.rawValue
-        let legacyToken = userDefaults.string(forKey: AppSettingsKeys.userPuterAuthTokenLegacy) ?? ""
-        userPuterAuthToken = KeychainStore.string(for: KeychainStore.puterAuthTokenAccount) ?? legacyToken
+        let legacyToken = userDefaults.string(forKey: AppSettingsKeys.userLocalAuthTokenLegacy) ?? ""
+        userLocalAuthToken = KeychainStore.string(for: KeychainStore.puterAuthTokenAccount) ?? legacyToken
         if !legacyToken.isEmpty {
             KeychainStore.set(legacyToken, for: KeychainStore.puterAuthTokenAccount)
-            userDefaults.removeObject(forKey: AppSettingsKeys.userPuterAuthTokenLegacy)
+            userDefaults.removeObject(forKey: AppSettingsKeys.userLocalAuthTokenLegacy)
         }
-        userPuterUsername = userDefaults.string(forKey: AppSettingsKeys.userPuterUsername) ?? ""
+        userLocalUsername = userDefaults.string(forKey: AppSettingsKeys.userLocalUsername) ?? ""
     }
 
     var defaultModel: ImageModel {
@@ -59,8 +59,8 @@ final class AppSettingsStore: ObservableObject {
         return model.defaultQuality
     }
 
-    var hasUserPuterToken: Bool {
-        !userPuterAuthToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    var hasUserLocalToken: Bool {
+        !userLocalAuthToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var puterAuthURL: URL {
@@ -75,9 +75,9 @@ final class AppSettingsStore: ObservableObject {
 
     
 
-    func clearPuterConnection() {
-        userPuterAuthToken = ""
-        userPuterUsername = ""
+    func clearLocalConnection() {
+        userLocalAuthToken = ""
+        userLocalUsername = ""
     }
 
     private func imageAPIBaseURL() -> URL {
