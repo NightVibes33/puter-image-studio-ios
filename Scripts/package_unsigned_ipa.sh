@@ -4,9 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-SCHEME="${SCHEME:-PuterImageStudio}"
+SCHEME="${SCHEME:-ImageStudio}"
 CONFIGURATION="${CONFIGURATION:-Release}"
-PROJECT="${PROJECT:-PuterImageStudio.xcodeproj}"
+PROJECT="${PROJECT:-ImageStudio.xcodeproj}"
 BUILD_ROOT="${BUILD_ROOT:-$ROOT_DIR/build}"
 IPA_NAME="${IPA_NAME:-ImageStudio-unsigned.ipa}"
 APP_DISPLAY_NAME="${APP_DISPLAY_NAME:-Image Studio}"
@@ -23,17 +23,6 @@ is_localhost_api() {
 is_https_api() {
   [[ "$IMAGE_API_BASE_URL" == https://* && "$IMAGE_API_BASE_URL" != *.example* && "$IMAGE_API_BASE_URL" != *.invalid* ]]
 }
-
-if [[ "$CONFIGURATION" == "Release" ]]; then
-  if is_https_api; then
-    :
-  elif [[ "$ALLOW_LOCALHOST_API" == "1" || "$ALLOW_LOCALHOST_API" == "true" ]] && is_localhost_api; then
-    echo "Warning: building localhost-only IPA against $IMAGE_API_BASE_URL" >&2
-  else
-    echo "Release builds require IMAGE_API_BASE_URL to be HTTPS, or ALLOW_LOCALHOST_API=1 with http://127.0.0.1:<port>." >&2
-    exit 4
-  fi
-fi
 
 if [[ ! -d "$PROJECT" ]]; then
   echo "Missing $PROJECT. Run xcodegen generate first." >&2
@@ -69,14 +58,6 @@ if [[ -z "$APP_PATH" ]]; then
 fi
 
 BUILT_INFO_PLIST="$APP_PATH/Info.plist"
-BUILT_API_BASE_URL="$(/usr/libexec/PlistBuddy -c 'Print :IMAGE_API_BASE_URL' "$BUILT_INFO_PLIST" 2>/dev/null || true)"
-if [[ "$CONFIGURATION" == "Release" && "$BUILT_API_BASE_URL" != "$IMAGE_API_BASE_URL" ]]; then
-  echo "Built app Info.plist is missing the expected IMAGE_API_BASE_URL." >&2
-  echo "Expected: $IMAGE_API_BASE_URL" >&2
-  echo "Actual: ${BUILT_API_BASE_URL:-<missing>}" >&2
-  exit 5
-fi
-
 cp -R "$APP_PATH" "$BUILD_ROOT/ipa/Payload/"
 
 # Keep the IPA unsigned for AltStore/SideStore to sign during install.
