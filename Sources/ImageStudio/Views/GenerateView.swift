@@ -17,8 +17,8 @@ struct GenerateView: View {
 
     @State private var selectedStyle = StylePreset.defaultPreset
     @State private var selectedAspect = AspectPreset.fallback
-    @State private var selectedModel = ImageModel.fallback
-    @State private var selectedQuality: ImageQuality? = .low
+    // Only one model exists now — on-device SDXL
+    private let selectedModel = ImageModel.fallback
     @State private var currentImage: GeneratedImage?
     @State private var isGenerating = false
     @State private var visiblePrompt = ""
@@ -54,13 +54,12 @@ struct GenerateView: View {
                                 savedBanner(savedMessage)
                             }
 
-                            if selectedModel.isLocal {
-                                localModelStatusCard
-                            }
+                            // Model status card — always shown (it's the only model)
+                            localModelStatusCard
 
                             promptSurface
 
-                            if selectedModel.isLocal && showAdvanced {
+                            if showAdvanced {
                                 advancedLocalOptions
                             }
 
@@ -105,7 +104,7 @@ struct GenerateView: View {
             )) {
                 if let shareURL { ShareSheet(activityItems: [shareURL]) }
             }
-            .onAppear(perform: loadSettingsOnce)
+            .onAppear { localModelInstaller.refresh() }
             .onDisappear { generationTask?.cancel() }
         }
     }
@@ -148,7 +147,7 @@ struct GenerateView: View {
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text(selectedModel.isLocal ? "On-device generation" : "Cloud generation")
+                Text("On-device generation")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.66))
                     .lineLimit(1)
@@ -176,7 +175,7 @@ struct GenerateView: View {
                 .frame(maxWidth: .infinity, minHeight: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(alignment: .bottomTrailing) {
-                    Text("\(currentImage.width) × \(currentImage.height)")
+                    Text("\(currentImage.width) \u00d7 \(currentImage.height)")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 9).padding(.vertical, 6)
@@ -200,11 +199,7 @@ struct GenerateView: View {
 
     // MARK: - Local model status card
 
-    /// Extracts overallProgress from the .active case; returns 0 for all other states.
-    private var localModelOverallProgress: Double {
-        if case .active(_, _, let overall, _, _) = localModelInstaller.state { return overall }
-        return 0
-    }
+    private var localModelOverallProgress: Double { localModelInstaller.state.overallProgress }
 
     private var localModelStatusCard: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -282,19 +277,27 @@ struct GenerateView: View {
     private var localModelStatusMessage: String {
         switch localModelInstaller.state {
         case .missing:
-            if let entry = localModelInstaller.modelEntry {
-                return "Requires \(entry.requiredFreeSpaceDescription) free · On-device, no credits."
+            if let needed = localModelInstaller.insufficientSpaceBytes {
+                let gb = String(format: "%.1f", Double(needed) / 1_000_000_000)
+                return "Not enough space. Free at least \(gb) GB and try again."
             }
-            return "Tap to install the local model."
+            if let entry = localModelInstaller.modelEntry {
+                return "Requires \(entry.requiredFreeSpaceDescription) free \u00b7 Private, no internet needed."
+            }
+            return "Tap Install to download the on-device model."
         case .active(_, _, let overall, let speed, let eta):
             let pct = Int(overall * 100)
             if let eta {
-                return "\(pct)% · \(speedLabel(speed)) · \(etaLabel(eta))"
+                return "\(pct)% \u00b7 \(speedLabel(speed)) \u00b7 \(etaLabel(eta))"
             }
-            return "\(pct)% · \(speedLabel(speed))"
+            return "\(pct)% \u00b7 \(speedLabel(speed))"
         case .installed:
             return "Ready for on-device generation."
         case .failed(let e):
+            if case .insufficientDiskSpace(let needed) = e {
+                let gb = String(format: "%.1f", Double(needed) / 1_000_000_000)
+                return "Not enough space. Free at least \(gb) GB, then tap Retry."
+            }
             return e.recoverySuggestion ?? "Tap Retry to try again."
         }
     }
@@ -306,8 +309,15 @@ struct GenerateView: View {
             Button("Cancel", role: .destructive) { localModelInstaller.cancel() }
                 .buttonStyle(.bordered)
         case .missing:
-            Button("Install") { localModelInstaller.install() }
-                .buttonStyle(.borderedProminent)
+            Button("Install") {
+                if localModelInstaller.insufficientSpaceBytes != nil {
+                    // Surface a clear error instead of starting
+                    localModelInstaller.install()
+                } else {
+                    showInstaller = true
+                }
+            }
+            .buttonStyle(.borderedProminent)
         case .failed:
             Button("Retry") { localModelInstaller.install() }
                 .buttonStyle(.borderedProminent)
@@ -337,7 +347,7 @@ struct GenerateView: View {
                 }
             }
 
-            if selectedModel.isLocal && showNegativePrompt {
+            if showNegativePrompt {
                 Divider().background(.white.opacity(0.10))
                 ZStack(alignment: .topLeading) {
                     TextEditor(text: $negativePrompt)
@@ -347,7 +357,7 @@ struct GenerateView: View {
                         .scrollContentBackground(.hidden)
                         .background(.clear)
                     if negativePrompt.isEmpty {
-                        Text("Negative prompt (optional)…")
+                        Text("Negative prompt (optional)\u2026")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.35))
                             .padding(.horizontal, 17).padding(.vertical, 17)
@@ -371,53 +381,28 @@ struct GenerateView: View {
                         }
                     }
                 }
-                Menu {
-                    ForEach(ImageModel.presets) { model in
-                        Button {
-                            selectedModel = model
-                            selectedQuality = settingsStore.defaultQuality(for: model)
-                            if model.isLocal { showAdvanced = false }
-                        } label: {
-                            Label(model.title, systemImage: model.isLocal ? "cpu" : "cloud")
-                        }
-                    }
-                    if selectedModel.supportsQuality {
-                        Divider()
-                        ForEach(selectedModel.supportedQualities) { quality in
-                            Button { selectedQuality = quality } label: {
-                                Label(quality.title,
-                                      systemImage: selectedQuality == quality ? "checkmark.circle.fill" : "circle")
-                            }
-                        }
-                    }
+
+                // Negative prompt toggle
+                Button {
+                    withAnimation(.spring(response: 0.28)) { showNegativePrompt.toggle() }
                 } label: {
-                    compactControlLabel(
-                        title: selectedModel.title,
-                        systemImage: selectedModel.isLocal ? "cpu" : "cloud"
-                    )
+                    Image(systemName: showNegativePrompt ? "minus.circle.fill" : "minus.circle")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(width: 34, height: 34)
+                        .foregroundStyle(showNegativePrompt ? AppTheme.accent : .white.opacity(0.60))
                 }
+                .accessibilityLabel(showNegativePrompt ? "Hide negative prompt" : "Show negative prompt")
 
-                if selectedModel.isLocal {
-                    Button {
-                        withAnimation(.spring(response: 0.28)) { showNegativePrompt.toggle() }
-                    } label: {
-                        Image(systemName: showNegativePrompt ? "minus.circle.fill" : "minus.circle")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(width: 34, height: 34)
-                            .foregroundStyle(showNegativePrompt ? AppTheme.accent : .white.opacity(0.60))
-                    }
-                    .accessibilityLabel(showNegativePrompt ? "Hide negative prompt" : "Show negative prompt")
-
-                    Button {
-                        withAnimation(.spring(response: 0.28)) { showAdvanced.toggle() }
-                    } label: {
-                        Image(systemName: showAdvanced ? "slider.horizontal.3" : "slider.horizontal.below.square.and.square")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(width: 34, height: 34)
-                            .foregroundStyle(showAdvanced ? AppTheme.accent : .white.opacity(0.60))
-                    }
-                    .accessibilityLabel(showAdvanced ? "Hide advanced options" : "Show advanced options")
+                // Advanced options toggle
+                Button {
+                    withAnimation(.spring(response: 0.28)) { showAdvanced.toggle() }
+                } label: {
+                    Image(systemName: showAdvanced ? "slider.horizontal.3" : "slider.horizontal.below.square.and.square")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(width: 34, height: 34)
+                        .foregroundStyle(showAdvanced ? AppTheme.accent : .white.opacity(0.60))
                 }
+                .accessibilityLabel(showAdvanced ? "Hide advanced options" : "Show advanced options")
 
                 Spacer(minLength: 4)
 
@@ -469,7 +454,6 @@ struct GenerateView: View {
                     }
                 }
             }
-
             HStack {
                 Label("Steps  \(stepCount)", systemImage: "repeat")
                     .font(.caption.weight(.semibold))
@@ -480,7 +464,6 @@ struct GenerateView: View {
                 ), in: 10...50, step: 1)
                 .tint(AppTheme.accent)
             }
-
             HStack {
                 Label("CFG  \(String(format: "%.1f", guidanceScale))", systemImage: "dial.low")
                     .font(.caption.weight(.semibold))
@@ -518,21 +501,15 @@ struct GenerateView: View {
 
     private var canGenerate: Bool {
         !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && localModelInstaller.state.isInstalled
     }
 
     private func resultActions(for image: GeneratedImage) -> some View {
         HStack(spacing: 8) {
-            actionButton(title: "Save", systemImage: "square.and.arrow.down") { save(image) }
-            actionButton(title: "Share", systemImage: "square.and.arrow.up") {
-                shareURL = historyStore.localURL(for: image)
-            }
-            actionButton(title: "Regenerate", systemImage: "arrow.clockwise") {
-                prompt = image.revisedPrompt ?? image.prompt
-                generate()
-            }
-            actionButton(title: "Reuse", systemImage: "doc.on.doc") {
-                reuseSettings(from: image)
-            }
+            actionButton(title: "Save",       systemImage: "square.and.arrow.down") { save(image) }
+            actionButton(title: "Share",      systemImage: "square.and.arrow.up")   { shareURL = historyStore.localURL(for: image) }
+            actionButton(title: "Regenerate", systemImage: "arrow.clockwise")       { prompt = image.revisedPrompt ?? image.prompt; generate() }
+            actionButton(title: "Reuse",      systemImage: "doc.on.doc")             { reuseSettings(from: image) }
         }
     }
 
@@ -583,20 +560,10 @@ struct GenerateView: View {
         showAdvanced = true
     }
 
-    private func loadSettingsOnce() {
-        guard !didLoadSettings else { return }
-        didLoadSettings = true
-        selectedModel = settingsStore.defaultModel
-        selectedQuality = settingsStore.defaultQuality(for: selectedModel)
-    }
-
     private func generate() {
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedPrompt.isEmpty else { error = .emptyPrompt; return }
-        guard selectedModel.isLocal || settingsStore.hasUserPuterToken else {
-            error = .missingPuterConnection; return
-        }
-        if selectedModel.isLocal, case .missing = localModelInstaller.state {
+        guard localModelInstaller.state.isInstalled else {
             showInstaller = true; return
         }
         generationTask?.cancel()
@@ -607,22 +574,21 @@ struct GenerateView: View {
 
         let composedPrompt = selectedStyle.apply(to: trimmedPrompt)
         visiblePrompt = trimmedPrompt
-        let quality = selectedModel.supportsQuality ? selectedQuality?.rawValue : nil
-        let outputWidth  = selectedModel.isLocal ? 768 : selectedAspect.width
-        let outputHeight = selectedModel.isLocal ? 768 : selectedAspect.height
+        let outputWidth  = selectedAspect.width
+        let outputHeight = selectedAspect.height
         let resolvedSeed = UInt32(seed.trimmingCharacters(in: .whitespaces))
         let neg = negativePrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = ImageGenerationRequest(
             prompt: composedPrompt,
             negativePrompt: neg.isEmpty ? nil : neg,
             model: selectedModel.backendModel,
-            quality: quality,
+            quality: nil,
             width: outputWidth,
             height: outputHeight,
+            responseFormat: .b64JSON,
             seed: resolvedSeed,
-            stepCount: selectedModel.isLocal ? stepCount : nil,
-            guidanceScale: selectedModel.isLocal ? guidanceScale : nil,
-            responseFormat: .b64JSON
+            stepCount: stepCount,
+            guidanceScale: guidanceScale
         )
         let client = environment.imageClient
         let store  = historyStore
@@ -694,7 +660,7 @@ struct GenerateView: View {
 private extension LocalModelInstallPhase {
     var displayTitle: String {
         switch self {
-        case .queued:           return "Queued…"
+        case .queued:           return "Queued\u2026"
         case .downloading:      return "Downloading SDXL"
         case .verifyingArchive: return "Verifying archive"
         case .extracting:       return "Extracting model"

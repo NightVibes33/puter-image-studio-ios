@@ -1,80 +1,57 @@
 import Foundation
 
-/// Typed errors for the local model install pipeline.
-/// Replaces the old `GenerationError` cases and `LocalModelInstallState.failed(String)`.
-enum LocalModelInstallError: LocalizedError, Equatable, Sendable {
-    case manifestNotFound
+enum LocalModelInstallError: Error, Equatable, Sendable {
     case unknownModelID(String)
-    case storageTooLow(available: Int64, required: Int64)
-    case networkUnavailable
-    case timedOut
-    case downloadFailed(reason: String)
-    case checksumMismatch(expected: String, actual: String)
-    case extractionFailed(reason: String)
-    case validationFailed(missingFiles: [String])
-    case activationFailed(reason: String)
-    case rollbackFailed(reason: String)
-    case deviceNotSupported(reason: String)
+    case insufficientDiskSpace(requiredBytes: Int64)
+    case downloadFailed(String)
+    case checksumMismatch
+    case extractionFailed(String)
+    case validationFailed(String)
+    case activationFailed(String)
     case cancelled
+    case unknown(String)
+
+    // MARK: - LocalizedError
 
     var errorDescription: String? {
         switch self {
-        case .manifestNotFound:
-            return "The local model catalog is missing from the app."
-        case .unknownModelID(let id):
-            return "No model found with ID \"\(id)\"."
-        case .storageTooLow(let available, let required):
-            let fmt = ByteCountFormatter()
-            fmt.countStyle = .file
-            return "Not enough storage. \(fmt.string(fromByteCount: available)) free, \(fmt.string(fromByteCount: required)) required."
-        case .networkUnavailable:
-            return "Network unavailable. Check your connection and try again."
-        case .timedOut:
-            return "Download timed out. Use a stable Wi-Fi connection."
-        case .downloadFailed(let reason):
-            return reason.isEmpty ? "Download failed. Tap Retry." : reason
-        case .checksumMismatch:
-            return "The downloaded archive is corrupted. Tap Retry to download again."
-        case .extractionFailed(let reason):
-            return reason.isEmpty ? "Extraction failed." : reason
-        case .validationFailed(let files):
-            let list = files.prefix(3).joined(separator: ", ")
-            return "Install validation failed — missing: \(list)."
-        case .activationFailed(let reason):
-            return reason.isEmpty ? "Could not activate the installed model." : reason
-        case .rollbackFailed(let reason):
-            return "Rollback failed: \(reason)."
-        case .deviceNotSupported(let reason):
-            return reason
-        case .cancelled:
-            return "Installation was cancelled."
+        case .unknownModelID(let id):              return "Unknown model: \(id)"
+        case .insufficientDiskSpace(let bytes):    return "Not enough storage (need \(formatBytes(bytes)))"
+        case .downloadFailed(let msg):             return "Download failed: \(msg)"
+        case .checksumMismatch:                    return "Download verification failed"
+        case .extractionFailed(let msg):           return "Extraction failed: \(msg)"
+        case .validationFailed(let msg):           return "Validation failed: \(msg)"
+        case .activationFailed(let msg):           return "Activation failed: \(msg)"
+        case .cancelled:                           return "Installation cancelled"
+        case .unknown(let msg):                    return msg
         }
     }
 
     var recoverySuggestion: String? {
         switch self {
-        case .storageTooLow:
-            return "Free up storage in Settings → General → iPhone Storage, then retry."
-        case .networkUnavailable, .timedOut, .downloadFailed:
-            return "Connect to Wi-Fi and tap Retry."
-        case .checksumMismatch, .extractionFailed:
-            return "The download will restart from scratch."
-        case .validationFailed:
-            return "Tap Reinstall to re-download the model."
-        case .deviceNotSupported:
-            return "This model requires a newer device."
-        default:
+        case .insufficientDiskSpace(let needed):
+            return "Free at least \(formatBytes(needed)) and tap Retry."
+        case .checksumMismatch:
+            return "The file may be corrupted. Tap Retry to re-download."
+        case .downloadFailed:
+            return "Check your internet connection and tap Retry."
+        case .cancelled:
             return nil
+        default:
+            return "Tap Retry to try again."
         }
     }
 
-    /// True if the error is worth auto-retrying with exponential backoff.
     var isRetryable: Bool {
         switch self {
-        case .networkUnavailable, .timedOut, .downloadFailed:
-            return true
-        default:
-            return false
+        case .insufficientDiskSpace, .cancelled: return false
+        default: return true
         }
+    }
+
+    // MARK: - Helpers
+
+    private func formatBytes(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 }

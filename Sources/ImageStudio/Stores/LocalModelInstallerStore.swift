@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Installer Store (thin UI layer over LocalModelInstallCoordinator)
+// MARK: - Installer Store
 
 @MainActor
 final class LocalModelInstallerStore: ObservableObject {
@@ -17,16 +17,24 @@ final class LocalModelInstallerStore: ObservableObject {
 
     init(modelID: String = "local-sdxl-base") {
         self.modelID = modelID
-        // Load catalog; fall back to .missing on error rather than crashing
         let loaded = (try? LocalModelCatalog.bundled()) ?? LocalModelCatalog(schemaVersion: 1, models: [])
         self.catalog = loaded
-        // Determine initial state
+
+        // Determine initial state — never crash even if catalog is empty
         if let entry = loaded.entry(id: modelID) {
             let store = LocalManifestModelStore(entry: entry)
             if let version = store.installedVersion() {
                 self.state = .installed(version: version)
             } else {
-                self.state = .missing
+                // Check if an install was interrupted (resume data exists)
+                let resumeURL = LocalModelDownloadManager.resumeDataURL(modelID: modelID)
+                if FileManager.default.fileExists(atPath: resumeURL.path) {
+                    // Resume data present but install not complete — treat as missing
+                    // so the user can tap Retry and we pick up the download
+                    self.state = .missing
+                } else {
+                    self.state = .missing
+                }
             }
         } else {
             self.state = .missing
@@ -38,8 +46,19 @@ final class LocalModelInstallerStore: ObservableObject {
     var modelEntry: LocalModelEntry? { catalog.entry(id: modelID) }
 
     var hasResumeData: Bool {
-        let url = LocalModelDownloadManager.resumeDataURL(modelID: modelID)
-        return FileManager.default.fileExists(atPath: url.path)
+        FileManager.default.fileExists(
+            atPath: LocalModelDownloadManager.resumeDataURL(modelID: modelID).path
+        )
+    }
+
+    /// Returns nil if there is enough space, or the required bytes if not.
+    var insufficientSpaceBytes: Int64? {
+        guard let entry = catalog.entry(id: modelID) else { return nil }
+        let required = entry.requiredBytes
+        guard let available = availableDiskBytes() else { return nil }
+        // Require at least 2x the compressed size as working room (download + extract)
+        let needed = Int64(Double(required) * 2.2)
+        return available < needed ? needed : nil
     }
 
     func refresh() {
@@ -62,6 +81,12 @@ final class LocalModelInstallerStore: ObservableObject {
             state = .failed(.unknownModelID(modelID))
             return
         }
+        // Disk space pre-check — fail fast with a clear error rather than crashing mid-download
+        if let needed = insufficientSpaceBytes {
+            let gb = String(format: "%.1f", Double(needed) / 1_000_000_000)
+            state = .failed(.insufficientDiskSpace(requiredBytes: needed))
+            return
+        }
         retryCount = 0
         startInstall(entry: entry)
     }
@@ -78,7 +103,6 @@ final class LocalModelInstallerStore: ObservableObject {
         guard !state.isBusy, let entry = catalog.entry(id: modelID) else { return }
         let store = LocalManifestModelStore(entry: entry)
         store.deleteInstall()
-        // Also clear any leftover resume data
         try? FileManager.default.removeItem(
             at: LocalModelDownloadManager.resumeDataURL(modelID: modelID)
         )
@@ -98,36 +122,35 @@ final class LocalModelInstallerStore: ObservableObject {
         coord.onComplete = { [weak self] in
             guard let self else { return }
             self.retryCount = 0
-            if let version = LocalManifestModelStore(entry: entry).installedVersion() {
-                self.state = .installed(version: version)
-            } else {
-                self.state = .installed(version: entry.version)
-            }
+            let version = LocalManifestModelStore(entry: entry).installedVersion() ?? entry.version
+            self.state = .installed(version: version)
         }
         coord.onError = { [weak self] error in
             guard let self else { return }
+            // Don't retry disk-space or non-retryable errors
             if error.isRetryable && self.retryCount < Self.maxRetries {
                 self.retryCount += 1
                 let backoff = pow(2.0, Double(self.retryCount))
-                self.state = .active(
-                    phase: .downloading,
-                    progress: 0,
-                    overallProgress: 0,
-                    speedBytesPerSec: 0,
-                    etaSeconds: backoff
-                )
                 self.installTask = Task {
                     try? await Task.sleep(for: .seconds(backoff))
                     guard !Task.isCancelled else { return }
                     await coord.install()
                 }
             } else {
+                self.coordinator = nil
                 self.state = .failed(error)
             }
         }
 
-        installTask = Task {
-            await coord.install()
-        }
+        installTask = Task { await coord.install() }
+    }
+
+    // MARK: - Helpers
+
+    private func availableDiskBytes() -> Int64? {
+        guard let attrs = try? FileManager.default.attributesOfFileSystem(
+            forPath: NSHomeDirectory()
+        ) else { return nil }
+        return (attrs[.systemFreeSize] as? NSNumber)?.int64Value
     }
 }
