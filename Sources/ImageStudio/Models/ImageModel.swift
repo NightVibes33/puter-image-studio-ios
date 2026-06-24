@@ -7,36 +7,33 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
     var backendModel: String
     var defaultQuality: ImageQuality?
     var supportedQualities: [ImageQuality]
+    /// Approximate download size in bytes. nil for cloud models.
+    var modelSizeBytes: Int64?
 
     var supportsQuality: Bool {
         !supportedQualities.isEmpty
     }
 
-    /// True when this model runs entirely on-device via the local CoreML pipeline.
-    /// Determined by checking the bundled manifest rather than a hardcoded string.
     var isLocal: Bool {
-        guard let catalog = try? LocalModelCatalog.bundled() else {
-            // Fallback: treat the legacy backend ID as local
-            return backendModel == "local-coreml-sdxl" || backendModel.hasPrefix("local-")
-        }
-        return catalog.models.contains { $0.id == id }
+        backendModel == LocalStableDiffusionModelStore.backendModelID
     }
 
+    // MARK: - Presets
+    // Local SDXL is first and is the fallback — no cloud credentials needed.
     static let presets: [ImageModel] = [
-        // ── Local models ────────────────────────────────────────────────────
         ImageModel(
-            id: "local-sdxl-base",
-            title: "SDXL Base",
-            subtitle: "On-device · No credits",
-            backendModel: "local-sdxl-base",
+            id: "local-sdxl",
+            title: "Local SDXL",
+            subtitle: "On-device · no credits needed",
+            backendModel: LocalStableDiffusionModelStore.backendModelID,
             defaultQuality: nil,
-            supportedQualities: []
+            supportedQualities: [],
+            modelSizeBytes: 6_400_000_000   // ~6 GB zipped
         ),
-        // ── Cloud models (kept for future optional cloud toggle) ──────────
         ImageModel(
             id: "gpt-image-2",
             title: "GPT Image 2",
-            subtitle: "Balanced detail",
+            subtitle: "Balanced detail (cloud)",
             backendModel: "gpt-image-2",
             defaultQuality: .low,
             supportedQualities: [.low, .medium, .high]
@@ -44,7 +41,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         ImageModel(
             id: "gemini-image",
             title: "Gemini Image",
-            subtitle: "Fast creative draft",
+            subtitle: "Fast creative draft (cloud)",
             backendModel: "gemini-2.5-flash-image-preview",
             defaultQuality: nil,
             supportedQualities: []
@@ -52,7 +49,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         ImageModel(
             id: "flux-schnell",
             title: "Flux Schnell",
-            subtitle: "Quick stylized output",
+            subtitle: "Quick stylized output (cloud)",
             backendModel: "black-forest-labs/flux-schnell",
             defaultQuality: nil,
             supportedQualities: []
@@ -60,15 +57,15 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         ImageModel(
             id: "dall-e-3",
             title: "DALL-E 3",
-            subtitle: "Prompt faithful",
+            subtitle: "Prompt faithful (cloud)",
             backendModel: "dall-e-3",
             defaultQuality: .standard,
             supportedQualities: [.standard, .hd]
         ),
         ImageModel(
             id: "sdxl",
-            title: "SDXL (Cloud)",
-            subtitle: "Open style range",
+            title: "SDXL",
+            subtitle: "Open style range (cloud)",
             backendModel: "stabilityai/stable-diffusion-xl-base-1.0",
             defaultQuality: nil,
             supportedQualities: []
@@ -76,16 +73,11 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
     ]
 
     static var fallback: ImageModel {
-        presets[0]
+        presets[0] // Local SDXL — never requires credentials
     }
 
     static func preset(id: String) -> ImageModel {
         presets.first { $0.id == id } ?? fallback
-    }
-
-    /// Returns only models that run on-device.
-    static var localModels: [ImageModel] {
-        presets.filter { $0.isLocal }
     }
 }
 
@@ -100,11 +92,11 @@ enum ImageQuality: String, Codable, CaseIterable, Identifiable, Hashable, Sendab
 
     var title: String {
         switch self {
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
+        case .low:      return "Low"
+        case .medium:   return "Medium"
+        case .high:     return "High"
         case .standard: return "Standard"
-        case .hd: return "HD"
+        case .hd:       return "HD"
         }
     }
 }

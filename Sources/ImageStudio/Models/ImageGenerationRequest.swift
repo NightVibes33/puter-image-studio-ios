@@ -7,13 +7,10 @@ struct ImageGenerationRequest: Codable, Equatable, Sendable {
     var quality: String?
     var width: Int
     var height: Int
-    var responseFormat: ResponseFormat
-
-    // Local-only inference controls
-    // These are ignored by cloud clients and used directly by the local SD pipeline.
     var seed: UInt32?
     var stepCount: Int?
     var guidanceScale: Float?
+    var responseFormat: ResponseFormat
 
     enum ResponseFormat: String, Codable, Sendable {
         case url
@@ -22,28 +19,28 @@ struct ImageGenerationRequest: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case prompt
-        case negativePrompt = "negative_prompt"
+        case negativePrompt  = "negative_prompt"
         case model
         case quality
         case width
         case height
-        case responseFormat = "response_format"
         case seed
-        case stepCount  = "step_count"
-        case guidanceScale = "guidance_scale"
+        case stepCount       = "step_count"
+        case guidanceScale   = "guidance_scale"
+        case responseFormat  = "response_format"
     }
 
     init(
         prompt: String,
         negativePrompt: String? = nil,
         model: String,
-        quality: String? = nil,
+        quality: String?,
         width: Int,
         height: Int,
-        responseFormat: ResponseFormat = .url,
         seed: UInt32? = nil,
         stepCount: Int? = nil,
-        guidanceScale: Float? = nil
+        guidanceScale: Float? = nil,
+        responseFormat: ResponseFormat = .url
     ) {
         self.prompt = prompt
         self.negativePrompt = negativePrompt
@@ -51,9 +48,9 @@ struct ImageGenerationRequest: Codable, Equatable, Sendable {
         self.quality = quality
         self.width = width
         self.height = height
-        self.responseFormat = responseFormat
         self.seed = seed
         self.stepCount = stepCount
         self.guidanceScale = guidanceScale
+        self.responseFormat = responseFormat
     }
 }
