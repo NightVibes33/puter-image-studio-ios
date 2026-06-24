@@ -1,1 +1,15 @@
-Failed to get file contents. The path does not point to a file or directory, or the file does not exist in the repository.
+import Foundation
+
+final class LocalImageStudioClient: ImageGenerationClient {
+    private let localClient: ImageGenerationClient
+
+    init(localClient: ImageGenerationClient) {
+        self.localClient = localClient
+    }
+
+    func generate(_ request: ImageGenerationRequest) async throws -> GeneratedImage {
+        return try await localClient.generate(request)
+    }
+}
+
+extension LocalImageStudioClient: @unchecked Sendable {}
