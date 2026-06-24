@@ -21,6 +21,7 @@ rm -rf "$BUILD_ROOT"
 mkdir -p "$BUILD_ROOT/ipa/Payload"
 
 echo "Starting xcodebuild..."
+# Merge stderr into stdout so all compiler errors appear in the Actions log
 xcodebuild \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
@@ -35,7 +36,7 @@ xcodebuild \
   AD_HOC_CODE_SIGNING_ALLOWED=YES \
   COMPILER_INDEX_STORE_ENABLE=NO \
   DEBUG_INFORMATION_FORMAT=dwarf \
-  build
+  build 2>&1
 
 PRODUCT_DIR="$BUILD_ROOT/DerivedData/Build/Products/${CONFIGURATION}-iphoneos"
 echo "Searching for .app in $PRODUCT_DIR..."
