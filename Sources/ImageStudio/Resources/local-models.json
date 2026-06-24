@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "models": [
+    {
+      "id": "local-sdxl-base",
+      "version": "1.0.0",
+      "title": "SDXL Base",
+      "subtitle": "On-device · No credits · ~5.5 GB",
+      "archiveURL": "https://huggingface.co/apple/coreml-stable-diffusion-xl-base-ios/resolve/main/coreml-stable-diffusion-xl-base-ios_split_einsum_compiled.zip",
+      "sha256": "",
+      "installFolderName": "coreml-stable-diffusion-xl-base-ios_split_einsum_compiled",
+      "requiredFreeBytes": 10737418240,
+      "requiredFiles": [
+        "VAEDecoder.mlmodelc",
+        "VAEEncoder.mlmodelc",
+        "TextEncoder.mlmodelc",
+        "TextEncoder2.mlmodelc",
+        "vocab.json",
+        "merges.txt"
+      ],
+      "minimumChip": "a14",
+      "minimumRAMBytes": 6442450944,
+      "mirrorURLs": []
+    }
+  ]
+}

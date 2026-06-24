@@ -12,27 +12,27 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         !supportedQualities.isEmpty
     }
 
+    /// True when this model runs entirely on-device via the local CoreML pipeline.
+    /// Determined by checking the bundled manifest rather than a hardcoded string.
     var isLocal: Bool {
-        backendModel == LocalStableDiffusionModelStore.backendModelID
+        guard let catalog = try? LocalModelCatalog.bundled() else {
+            // Fallback: treat the legacy backend ID as local
+            return backendModel == "local-coreml-sdxl" || backendModel.hasPrefix("local-")
+        }
+        return catalog.models.contains { $0.id == id }
     }
 
     static let presets: [ImageModel] = [
+        // ── Local models ────────────────────────────────────────────────────
         ImageModel(
-            id: "local-sdxl",
-            title: "Local SDXL",
-            subtitle: "On-device, no credits",
-            backendModel: LocalStableDiffusionModelStore.backendModelID,
+            id: "local-sdxl-base",
+            title: "SDXL Base",
+            subtitle: "On-device · No credits",
+            backendModel: "local-sdxl-base",
             defaultQuality: nil,
             supportedQualities: []
         ),
-        ImageModel(
-            id: "auto",
-            title: "Cloud Auto",
-            subtitle: "Online fallback",
-            backendModel: "gpt-image-2",
-            defaultQuality: .low,
-            supportedQualities: [.low]
-        ),
+        // ── Cloud models (kept for future optional cloud toggle) ──────────
         ImageModel(
             id: "gpt-image-2",
             title: "GPT Image 2",
@@ -67,7 +67,7 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
         ),
         ImageModel(
             id: "sdxl",
-            title: "SDXL",
+            title: "SDXL (Cloud)",
             subtitle: "Open style range",
             backendModel: "stabilityai/stable-diffusion-xl-base-1.0",
             defaultQuality: nil,
@@ -81,6 +81,11 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
 
     static func preset(id: String) -> ImageModel {
         presets.first { $0.id == id } ?? fallback
+    }
+
+    /// Returns only models that run on-device.
+    static var localModels: [ImageModel] {
+        presets.filter { $0.isLocal }
     }
 }
 

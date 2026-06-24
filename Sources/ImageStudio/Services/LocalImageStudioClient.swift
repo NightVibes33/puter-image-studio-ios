@@ -1,17 +1,8 @@
-import Foundation
-
-// localClient must be Sendable-bound because LocalImageStudioClient itself is Sendable
-// and Swift 6 requires all stored properties of a Sendable type to be Sendable.
-final class LocalImageStudioClient: ImageGenerationClient {
-    private let localClient: any ImageGenerationClient & Sendable
-
-    init(localClient: any ImageGenerationClient & Sendable) {
-        self.localClient = localClient
-    }
-
-    func generate(_ request: ImageGenerationRequest) async throws -> GeneratedImage {
-        return try await localClient.generate(request)
-    }
-}
-
-extension LocalImageStudioClient: @unchecked Sendable {}
+// LocalImageStudioClient.swift
+// This wrapper is intentionally removed — LocalStableDiffusionImageGenerationClient
+// now conforms directly to ImageGenerationClient & Sendable, so the passthrough
+// wrapper is no longer needed. This file is kept as a tombstone to prevent
+// accidental re-introduction of the redundant wrapper.
+//
+// If a future use-case requires dispatching to multiple local backends, introduce
+// a proper LocalModelRouter instead of a single-method passthrough.
