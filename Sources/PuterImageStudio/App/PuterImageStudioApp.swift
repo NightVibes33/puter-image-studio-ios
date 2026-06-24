@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct PuterImageStudioApp: App {
+struct ImageStudioApp: App {
     @StateObject private var environment = AppEnvironment.live()
 
     var body: some Scene {
