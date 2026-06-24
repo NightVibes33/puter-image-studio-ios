@@ -10,6 +10,13 @@ PROJECT="ImageStudio.xcodeproj"
 BUILD_ROOT="$ROOT_DIR/build"
 IPA_NAME="ImageStudio-unsigned.ipa"
 
+# Detect the installed iphoneos SDK (e.g. iphoneos26.0)
+SDK=$(xcodebuild -showsdks 2>/dev/null | grep -oE 'iphoneos[0-9]+\.[0-9]+' | sort -V | tail -1)
+if [[ -z "$SDK" ]]; then
+  SDK="iphoneos"
+fi
+echo "Using SDK: $SDK"
+
 rm -rf "$BUILD_ROOT"
 mkdir -p "$BUILD_ROOT/ipa/Payload"
 
@@ -18,9 +25,10 @@ xcodebuild \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
-  -sdk iphoneos \
+  -sdk "$SDK" \
   -destination 'generic/platform=iOS' \
   -derivedDataPath "$BUILD_ROOT/DerivedData" \
+  -clonedSourcePackagesDirPath .spm-cache \
   CODE_SIGNING_ALLOWED=NO \
   CODE_SIGNING_REQUIRED=NO \
   CODE_SIGN_IDENTITY="" \
