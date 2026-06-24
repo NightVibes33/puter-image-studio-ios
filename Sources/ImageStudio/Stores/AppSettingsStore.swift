@@ -73,10 +73,7 @@ final class AppSettingsStore: ObservableObject {
         defaultQualityRaw = quality?.rawValue ?? ""
     }
 
-    func connectPuter(token: String, username: String?) {
-        userPuterAuthToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        userPuterUsername = username?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    }
+    
 
     func clearPuterConnection() {
         userPuterAuthToken = ""
