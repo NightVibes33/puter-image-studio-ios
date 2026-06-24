@@ -12,15 +12,6 @@ on:
         type: boolean
         required: true
         default: true
-      api_base_url:
-        description: Image API base URL. Use HTTPS for public builds, or http://127.0.0.1:8787 for the local root API.
-        required: false
-        default: ''
-      allow_localhost_api:
-        description: Allow a localhost-only IPA that depends on the root Puter API running on the same iPhone.
-        type: boolean
-        required: true
-        default: false
   push:
     tags:
       - 'v*'
@@ -29,13 +20,11 @@ permissions:
   contents: write
 
 env:
-  SCHEME: PuterImageStudio
+  SCHEME: ImageStudio
   CONFIGURATION: Release
   IPA_NAME: ImageStudio-unsigned.ipa
   PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudio
   IOS_DEPLOYMENT_TARGET: '26.0'
-  IMAGE_API_BASE_URL: ${{ inputs.api_base_url || vars.IMAGE_API_BASE_URL }}
-  ALLOW_LOCALHOST_API: ${{ inputs.allow_localhost_api || false }}
 
 jobs:
   build:
@@ -75,23 +64,6 @@ jobs:
           echo "build=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "Resolved tag=$TAG_NAME version=$VERSION build=${GITHUB_RUN_NUMBER}"
 
-      - name: Validate release API URL
-        run: |
-          set -euo pipefail
-          if [[ -z "${IMAGE_API_BASE_URL:-}" ]]; then
-            echo "::warning::Building a local-first IPA without a cloud fallback API URL."
-            exit 0
-          fi
-          if [[ "${IMAGE_API_BASE_URL:-}" == https://* && "${IMAGE_API_BASE_URL}" != *.example* && "${IMAGE_API_BASE_URL}" != *.invalid* ]]; then
-            exit 0
-          fi
-          if [[ "${ALLOW_LOCALHOST_API}" == "true" && ( "${IMAGE_API_BASE_URL:-}" == http://127.0.0.1:* || "${IMAGE_API_BASE_URL:-}" == http://localhost:* ) ]]; then
-            echo "::warning::Building a localhost-only IPA. The root Puter API must be running on the same iPhone for cloud fallback."
-            exit 0
-          fi
-          echo "::error::Set IMAGE_API_BASE_URL to deployed HTTPS, leave it empty for local-only generation, or pass api_base_url=http://127.0.0.1:8787 with allow_localhost_api=true for a local fallback API build."
-          exit 1
-
       - name: Generate Xcode project
         run: xcodegen generate
 
@@ -100,7 +72,6 @@ jobs:
         env:
           MARKETING_VERSION: ${{ steps.meta.outputs.version }}
           CURRENT_PROJECT_VERSION: ${{ steps.meta.outputs.build }}
-          ALLOW_LOCALHOST_API: ${{ env.ALLOW_LOCALHOST_API }}
         run: Scripts/package_unsigned_ipa.sh
 
       - name: Prepare AltStore and SideStore source
@@ -113,7 +84,7 @@ jobs:
           MIN_OS_VERSION: '26.0'
         run: |
           set -euo pipefail
-          cp Sources/PuterImageStudio/Assets.xcassets/AppIcon.appiconset/AppIcon.png build/AppIcon.png
+          cp Sources/ImageStudio/Assets.xcassets/AppIcon.appiconset/AppIcon.png build/AppIcon.png
           Scripts/generate_altstore_source.py
           SOURCE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.meta.outputs.tag }}/altstore-source.json"
           {
