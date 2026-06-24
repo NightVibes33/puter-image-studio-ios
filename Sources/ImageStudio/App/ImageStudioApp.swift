@@ -1,1 +1,16 @@
-Failed to get file contents. The path does not point to a file or directory, or the file does not exist in the repository.
+import SwiftUI
+
+@main
+struct ImageStudioApp: App {
+    @StateObject private var environment = AppEnvironment.live()
+
+    var body: some Scene {
+        WindowGroup {
+            RootView()
+                .environmentObject(environment)
+                .environmentObject(environment.historyStore)
+                .environmentObject(environment.settingsStore)
+                .environmentObject(environment.localModelInstallerStore)
+        }
+    }
+}
