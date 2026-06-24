@@ -40,7 +40,6 @@ struct SettingsView: View {
 
     private var localModelSection: some View {
         Section {
-            // Phase row
             HStack(spacing: 12) {
                 ZStack {
                     if localModelInstaller.state.isBusy {
@@ -72,7 +71,6 @@ struct SettingsView: View {
                 }
             }
 
-            // Action button row
             switch localModelInstaller.state {
             case .missing:
                 Button {
@@ -200,8 +198,8 @@ struct SettingsView: View {
 
             if settingsStore.defaultModel.supportsQuality {
                 Picker("Default Quality", selection: Binding(
-                    get: { settingsStore.defaultQuality(for: settingsStore.defaultModel) ?? .low },
-                    set: { settingsStore.setDefaultQuality($0, for: settingsStore.defaultModel) }
+                    get: { settingsStore.defaultQuality(for: settingsStore.defaultModel) },
+                    set: { settingsStore.setDefaultQuality($0) }
                 )) {
                     ForEach(settingsStore.defaultModel.supportedQualities) { q in
                         Text(q.title).tag(Optional(q))
