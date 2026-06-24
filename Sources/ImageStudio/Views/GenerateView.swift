@@ -8,6 +8,13 @@ struct GenerateView: View {
     @EnvironmentObject private var localModelInstaller: LocalModelInstallerStore
 
     @State private var prompt = ""
+    @State private var negativePrompt = ""
+    @State private var showNegativePrompt = false
+    @State private var seed: String = ""              // empty = random
+    @State private var stepCount: Int = LocalSDXLDefaults.stepCount
+    @State private var guidanceScale: Float = LocalSDXLDefaults.guidanceScale
+    @State private var showAdvanced = false
+
     @State private var selectedStyle = StylePreset.defaultPreset
     @State private var selectedAspect = AspectPreset.fallback
     @State private var selectedModel = ImageModel.fallback
@@ -19,6 +26,7 @@ struct GenerateView: View {
     @State private var error: GenerationError?
     @State private var showGallery = false
     @State private var showSettings = false
+    @State private var showInstaller = false
     @State private var shareURL: URL?
     @State private var savedMessage: String?
     @State private var didLoadSettings = false
@@ -33,27 +41,30 @@ struct GenerateView: View {
                 GeometryReader { proxy in
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 18) {
-                            topBar
-                                .padding(.top, 10)
+                            topBar.padding(.top, 10)
 
                             heroStage
-                                .frame(minHeight: currentImage == nil && !isGenerating ? max(210, proxy.size.height * 0.30) : 320)
+                                .frame(minHeight: currentImage == nil && !isGenerating
+                                       ? max(210, proxy.size.height * 0.30) : 320)
 
                             if let error {
-                                ErrorBanner(error: error) {
-                                    self.error = nil
-                                }
+                                ErrorBanner(error: error) { self.error = nil }
                             }
-
                             if let savedMessage {
                                 savedBanner(savedMessage)
                             }
 
-                            if selectedModel.isLocal && localModelInstaller.state != .installed {
+                            // Local model status card (only when local model selected)
+                            if selectedModel.isLocal {
                                 localModelStatusCard
                             }
 
                             promptSurface
+
+                            // Advanced local options (seed, steps, guidance, neg prompt)
+                            if selectedModel.isLocal && showAdvanced {
+                                advancedLocalOptions
+                            }
 
                             QuickActionGrid(actions: quickActions) { action in
                                 apply(action)
@@ -86,20 +97,22 @@ struct GenerateView: View {
                     .environmentObject(historyStore)
                     .environmentObject(localModelInstaller)
             }
+            .sheet(isPresented: $showInstaller) {
+                LocalModelInstallView()
+                    .environmentObject(localModelInstaller)
+            }
             .sheet(isPresented: Binding(
                 get: { shareURL != nil },
                 set: { if !$0 { shareURL = nil } }
             )) {
-                if let shareURL {
-                    ShareSheet(activityItems: [shareURL])
-                }
+                if let shareURL { ShareSheet(activityItems: [shareURL]) }
             }
             .onAppear(perform: loadSettingsOnce)
-            .onDisappear {
-                generationTask?.cancel()
-            }
+            .onDisappear { generationTask?.cancel() }
         }
     }
+
+    // MARK: - Background
 
     private var studioBackground: some View {
         ZStack {
@@ -109,8 +122,7 @@ struct GenerateView: View {
                     Color(red: 0.07, green: 0.10, blue: 0.16),
                     Color(red: 0.02, green: 0.02, blue: 0.03),
                 ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                startPoint: .topLeading, endPoint: .bottomTrailing
             )
             GeometryReader { proxy in
                 Circle()
@@ -129,6 +141,8 @@ struct GenerateView: View {
         .ignoresSafeArea()
     }
 
+    // MARK: - Top bar
+
     private var topBar: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -136,22 +150,20 @@ struct GenerateView: View {
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text(selectedModel.isLocal ? "On-device generation" : "Cloud fallback")
+                Text(selectedModel.isLocal ? "On-device generation" : "Cloud generation")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.66))
                     .lineLimit(1)
             }
             Spacer()
-            IconButton(systemName: "square.grid.2x2", title: "Gallery") {
-                showGallery = true
-            }
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
-            IconButton(systemName: "gearshape", title: "Settings") {
-                showSettings = true
-            }
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+            IconButton(systemName: "square.grid.2x2", title: "Gallery") { showGallery = true }
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+            IconButton(systemName: "gearshape", title: "Settings") { showSettings = true }
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         }
     }
+
+    // MARK: - Hero stage
 
     @ViewBuilder
     private var heroStage: some View {
@@ -166,11 +178,10 @@ struct GenerateView: View {
                 .frame(maxWidth: .infinity, minHeight: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(alignment: .bottomTrailing) {
-                    Text("\(currentImage.width) x \(currentImage.height)")
+                    Text("\(currentImage.width) × \(currentImage.height)")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 9).padding(.vertical, 6)
                         .background(.black.opacity(0.58), in: Capsule())
                         .padding(12)
                 }
@@ -179,194 +190,240 @@ struct GenerateView: View {
             VStack(spacing: 8) {
                 Text("Image Studio")
                     .font(.system(size: 40, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
+                    .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.72)
                 Text("Build something visual. Start typing below.")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.74))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                    .multilineTextAlignment(.center).lineLimit(2)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity).padding(.horizontal, 10)
         }
     }
 
+    // MARK: - Local model status card
 
     private var localModelStatusCard: some View {
         HStack(alignment: .center, spacing: 12) {
-            Image(systemName: localModelStatusIcon)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(localModelStatusTint)
-                .frame(width: 34, height: 34)
-                .background(.white.opacity(0.08), in: Circle())
+            ZStack {
+                if localModelInstaller.state.isBusy {
+                    Circle()
+                        .stroke(Color.white.opacity(0.12), lineWidth: 3)
+                        .frame(width: 36, height: 36)
+                    Circle()
+                        .trim(from: 0, to: localModelInstaller.state.overallProgress)
+                        .stroke(localModelStatusTint, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 36, height: 36)
+                        .animation(.linear(duration: 0.3), value: localModelInstaller.state.overallProgress)
+                }
+                Image(systemName: localModelStatusIcon)
+                    .font(.system(size: localModelInstaller.state.isBusy ? 13 : 18, weight: .bold))
+                    .foregroundStyle(localModelStatusTint)
+            }
+            .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(localModelStatusTitle)
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
+                    .foregroundStyle(.white).lineLimit(1)
                 Text(localModelStatusMessage)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.70))
-                    .lineLimit(3)
+                    .foregroundStyle(.white.opacity(0.70)).lineLimit(2)
             }
 
             Spacer(minLength: 8)
-
             localModelStatusAction
         }
         .padding(12)
         .background(.black.opacity(0.36), in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(glassBorder(cornerRadius: AppTheme.cornerRadius))
+        .onTapGesture { if !localModelInstaller.state.isInstalled { showInstaller = true } }
     }
 
     private var localModelStatusIcon: String {
         switch localModelInstaller.state {
-        case .downloading: return "arrow.down.circle"
-        case .unpacking: return "archivebox"
-        case .failed: return "exclamationmark.triangle.fill"
-        case .missing: return "externaldrive.badge.exclamationmark"
-        case .installed: return "checkmark.circle.fill"
+        case .missing:                          return "externaldrive.badge.exclamationmark"
+        case .active(let phase, _, _, _, _):
+            switch phase {
+            case .downloading:                  return "arrow.down.circle"
+            case .verifyingArchive:             return "checkmark.shield"
+            case .extracting:                   return "archivebox"
+            case .validatingFiles:              return "doc.badge.gearshape"
+            case .activating:                   return "bolt.circle"
+            case .rollingBack:                  return "arrow.uturn.backward.circle"
+            case .queued:                       return "clock"
+            }
+        case .installed:                        return "checkmark.circle.fill"
+        case .failed:                           return "exclamationmark.triangle.fill"
         }
     }
 
     private var localModelStatusTint: Color {
         switch localModelInstaller.state {
-        case .failed, .missing:
-            return AppTheme.warmAccent
-        case .installed:
-            return AppTheme.success
-        case .downloading, .unpacking:
-            return AppTheme.accent
+        case .failed, .missing:   return AppTheme.warmAccent
+        case .installed:          return AppTheme.success
+        case .active:             return AppTheme.accent
         }
     }
 
     private var localModelStatusTitle: String {
         switch localModelInstaller.state {
-        case .downloading: return "Downloading Local SDXL"
-        case .unpacking: return "Installing Local SDXL"
-        case .failed: return "Local SDXL install failed"
-        case .missing: return "Install Local SDXL"
-        case .installed: return "Local SDXL ready"
+        case .missing:                       return "Install SDXL model"
+        case .active(let phase, _, _, _, _): return phase.displayTitle
+        case .installed(let version):        return "SDXL v\(version) ready"
+        case .failed(let e):                 return e.errorDescription ?? "Install failed"
         }
     }
 
     private var localModelStatusMessage: String {
         switch localModelInstaller.state {
-        case .downloading:
-            return "Keep the app open while the 3GB Core ML model downloads."
-        case .unpacking:
-            return "Unzipping the model. First generation will compile Core ML assets."
-        case .failed(let message):
-            return message.isEmpty ? "Retry after checking connection and free storage." : message
         case .missing:
-            return "Local generation needs about 10GB free for download, extraction, and first compile."
+            if let entry = localModelInstaller.modelEntry {
+                return "Requires \(entry.requiredFreeSpaceDescription) free · On-device, no credits."
+            }
+            return "Tap to install the local model."
+        case .active(_, _, let overall, let speed, let eta):
+            let pct = Int(overall * 100)
+            if let eta {
+                return "\(pct)% · \(speedLabel(speed)) · \(etaLabel(eta))"
+            }
+            return "\(pct)% · \(speedLabel(speed))"
         case .installed:
             return "Ready for on-device generation."
+        case .failed(let e):
+            return e.recoverySuggestion ?? "Tap Retry to try again."
         }
     }
 
     @ViewBuilder
     private var localModelStatusAction: some View {
         switch localModelInstaller.state {
-        case .downloading, .unpacking:
-            Button("Cancel", role: .destructive) {
-                localModelInstaller.cancel()
-            }
-            .buttonStyle(.bordered)
+        case .active:
+            Button("Cancel", role: .destructive) { localModelInstaller.cancel() }
+                .buttonStyle(.bordered)
         case .missing:
-            Button("Install") {
-                localModelInstaller.install()
-            }
-            .buttonStyle(.borderedProminent)
+            Button("Install") { localModelInstaller.install() }
+                .buttonStyle(.borderedProminent)
         case .failed:
-            Button("Retry") {
-                localModelInstaller.install()
-            }
-            .buttonStyle(.borderedProminent)
+            Button("Retry") { localModelInstaller.install() }
+                .buttonStyle(.borderedProminent)
         case .installed:
             EmptyView()
         }
     }
 
+    // MARK: - Prompt surface
+
     private var promptSurface: some View {
         VStack(spacing: 0) {
+            // Main prompt
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $prompt)
                     .focused($isPromptFocused)
                     .frame(minHeight: 92, maxHeight: 150)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12).padding(.vertical, 10)
                     .foregroundStyle(.white)
                     .scrollContentBackground(.hidden)
                     .background(.clear)
-
                 if prompt.isEmpty {
                     Text("Type your image request...")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.46))
-                        .padding(.horizontal, 17)
-                        .padding(.vertical, 19)
+                        .padding(.horizontal, 17).padding(.vertical, 19)
                         .allowsHitTesting(false)
                 }
             }
 
-            HStack(spacing: 8) {
-                Button {
-                    isPromptFocused = true
-                } label: {
-                    Image(systemName: "paperclip")
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(width: 34, height: 34)
+            // Negative prompt row (local models only)
+            if selectedModel.isLocal && showNegativePrompt {
+                Divider().background(.white.opacity(0.10))
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $negativePrompt)
+                        .frame(minHeight: 52, maxHeight: 90)
+                        .padding(.horizontal, 12).padding(.vertical, 8)
+                        .foregroundStyle(.white.opacity(0.80))
+                        .scrollContentBackground(.hidden)
+                        .background(.clear)
+                    if negativePrompt.isEmpty {
+                        Text("Negative prompt (optional)…")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.35))
+                            .padding(.horizontal, 17).padding(.vertical, 17)
+                            .allowsHitTesting(false)
+                    }
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white.opacity(0.80))
-                .background(.white.opacity(0.08), in: Circle())
-                .accessibilityLabel("Attach reference")
+            }
 
+            // Toolbar row
+            HStack(spacing: 8) {
+                // Style picker
                 pickerMenu(title: selectedStyle.title, systemImage: selectedStyle.systemImage) {
                     ForEach(StylePreset.presets) { preset in
-                        Button {
-                            selectedStyle = preset
-                        } label: {
+                        Button { selectedStyle = preset } label: {
                             Label(preset.title, systemImage: preset.systemImage)
                         }
                     }
                 }
-
+                // Aspect picker
                 pickerMenu(title: selectedAspect.title, systemImage: selectedAspect.systemImage) {
                     ForEach(AspectPreset.presets) { preset in
-                        Button {
-                            selectedAspect = preset
-                        } label: {
+                        Button { selectedAspect = preset } label: {
                             Label(preset.title, systemImage: preset.systemImage)
                         }
                     }
                 }
-
+                // Model picker
                 Menu {
                     ForEach(ImageModel.presets) { model in
                         Button {
                             selectedModel = model
                             selectedQuality = settingsStore.defaultQuality(for: model)
+                            if model.isLocal { showAdvanced = false }
                         } label: {
-                            Label(model.title, systemImage: "cpu")
+                            Label(model.title, systemImage: model.isLocal ? "cpu" : "cloud")
                         }
                     }
                     if selectedModel.supportsQuality {
                         Divider()
                         ForEach(selectedModel.supportedQualities) { quality in
-                            Button {
-                                selectedQuality = quality
-                            } label: {
-                                Label(quality.title, systemImage: selectedQuality == quality ? "checkmark.circle.fill" : "circle")
+                            Button { selectedQuality = quality } label: {
+                                Label(quality.title,
+                                      systemImage: selectedQuality == quality ? "checkmark.circle.fill" : "circle")
                             }
                         }
                     }
                 } label: {
-                    compactControlLabel(title: selectedModel.title, systemImage: "cpu")
+                    compactControlLabel(
+                        title: selectedModel.title,
+                        systemImage: selectedModel.isLocal ? "cpu" : "cloud"
+                    )
+                }
+
+                // Local-only: neg prompt + advanced toggles
+                if selectedModel.isLocal {
+                    Button {
+                        withAnimation(.spring(response: 0.28)) {
+                            showNegativePrompt.toggle()
+                        }
+                    } label: {
+                        Image(systemName: showNegativePrompt ? "minus.circle.fill" : "minus.circle")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(width: 34, height: 34)
+                            .foregroundStyle(showNegativePrompt ? AppTheme.accent : .white.opacity(0.60))
+                    }
+                    .accessibilityLabel(showNegativePrompt ? "Hide negative prompt" : "Show negative prompt")
+
+                    Button {
+                        withAnimation(.spring(response: 0.28)) {
+                            showAdvanced.toggle()
+                        }
+                    } label: {
+                        Image(systemName: showAdvanced ? "slider.horizontal.3" : "slider.horizontal.below.square.and.square")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(width: 34, height: 34)
+                            .foregroundStyle(showAdvanced ? AppTheme.accent : .white.opacity(0.60))
+                    }
+                    .accessibilityLabel(showAdvanced ? "Hide advanced options" : "Show advanced options")
                 }
 
                 Spacer(minLength: 4)
@@ -374,8 +431,7 @@ struct GenerateView: View {
                 Button(action: generate) {
                     Group {
                         if isGenerating {
-                            ProgressView()
-                                .tint(.white)
+                            ProgressView().tint(.white)
                         } else {
                             Image(systemName: "arrow.up")
                                 .font(.system(size: 18, weight: .heavy))
@@ -383,7 +439,10 @@ struct GenerateView: View {
                     }
                     .frame(width: 42, height: 42)
                     .foregroundStyle(.white)
-                    .background(canGenerate ? AppTheme.accent : Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(
+                        canGenerate ? AppTheme.accent : Color.white.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    )
                 }
                 .disabled(!canGenerate || isGenerating)
                 .accessibilityLabel(isGenerating ? "Generating" : "Generate image")
@@ -395,24 +454,70 @@ struct GenerateView: View {
         .overlay(glassBorder(cornerRadius: 18))
     }
 
-    private func pickerMenu<Content: View>(title: String, systemImage: String, @ViewBuilder content: @escaping () -> Content) -> some View {
-        Menu(content: content) {
-            compactControlLabel(title: title, systemImage: systemImage)
+    // MARK: - Advanced local options
+
+    private var advancedLocalOptions: some View {
+        VStack(spacing: 12) {
+            // Seed
+            HStack {
+                Label("Seed", systemImage: "dice")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.80))
+                Spacer()
+                TextField("Random", text: $seed)
+                    .keyboardType(.numberPad)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 100)
+                if !seed.isEmpty {
+                    Button { seed = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.white.opacity(0.50))
+                    }
+                }
+            }
+
+            // Steps
+            HStack {
+                Label("Steps  \(stepCount)", systemImage: "repeat")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.80))
+                Slider(value: Binding(
+                    get: { Double(stepCount) },
+                    set: { stepCount = Int($0.rounded()) }
+                ), in: 10...50, step: 1)
+                .tint(AppTheme.accent)
+            }
+
+            // Guidance scale
+            HStack {
+                Label("CFG  \(String(format: "%.1f", guidanceScale))", systemImage: "dial.low")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.80))
+                Slider(value: $guidanceScale, in: 1...20, step: 0.5)
+                    .tint(AppTheme.accent)
+            }
         }
+        .padding(14)
+        .background(.black.opacity(0.36), in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+        .overlay(glassBorder(cornerRadius: AppTheme.cornerRadius))
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    // MARK: - Helper views
+
+    private func pickerMenu<C: View>(title: String, systemImage: String, @ViewBuilder content: @escaping () -> C) -> some View {
+        Menu(content: content) { compactControlLabel(title: title, systemImage: systemImage) }
     }
 
     private func compactControlLabel(title: String, systemImage: String) -> some View {
         HStack(spacing: 5) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .bold))
-            Text(title)
-                .font(.caption.weight(.bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
+            Image(systemName: systemImage).font(.system(size: 12, weight: .bold))
+            Text(title).font(.caption.weight(.bold)).lineLimit(1).minimumScaleFactor(0.72)
         }
         .foregroundStyle(.white.opacity(0.88))
-        .padding(.horizontal, 9)
-        .frame(height: 34)
+        .padding(.horizontal, 9).frame(height: 34)
         .background(.white.opacity(0.08), in: Capsule())
     }
 
@@ -427,9 +532,7 @@ struct GenerateView: View {
 
     private func resultActions(for image: GeneratedImage) -> some View {
         HStack(spacing: 8) {
-            actionButton(title: "Save", systemImage: "square.and.arrow.down") {
-                save(image)
-            }
+            actionButton(title: "Save", systemImage: "square.and.arrow.down") { save(image) }
             actionButton(title: "Share", systemImage: "square.and.arrow.up") {
                 shareURL = historyStore.localURL(for: image)
             }
@@ -437,21 +540,17 @@ struct GenerateView: View {
                 prompt = image.revisedPrompt ?? image.prompt
                 generate()
             }
-            actionButton(title: "Edit", systemImage: "slider.horizontal.3") {}
-                .disabled(true)
-                .opacity(0.55)
+            actionButton(title: "Reuse", systemImage: "doc.on.doc") {
+                reuseSettings(from: image)
+            }
         }
     }
 
     private func actionButton(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 5) {
-                Image(systemName: systemImage)
-                    .font(.headline)
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                Image(systemName: systemImage).font(.headline)
+                Text(title).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity, minHeight: 58)
             .foregroundStyle(.white)
@@ -464,23 +563,34 @@ struct GenerateView: View {
 
     private func savedBanner(_ message: String) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(AppTheme.success)
-            Text(message)
-                .font(.subheadline.weight(.semibold))
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(AppTheme.success)
+            Text(message).font(.subheadline.weight(.semibold))
             Spacer()
         }
-        .foregroundStyle(.white)
-        .padding(12)
+        .foregroundStyle(.white).padding(12)
         .background(.black.opacity(0.34), in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(glassBorder(cornerRadius: AppTheme.cornerRadius))
     }
+
+    // MARK: - Actions
 
     private func apply(_ action: QuickActionPreset) {
         prompt = action.prompt
         selectedStyle = action.style
         selectedAspect = action.aspect
         isPromptFocused = true
+    }
+
+    private func reuseSettings(from image: GeneratedImage) {
+        prompt = image.prompt
+        if let neg = image.negativePrompt, !neg.isEmpty {
+            negativePrompt = neg
+            showNegativePrompt = true
+        }
+        if let s = image.seed { seed = "\(s)" }
+        if let steps = image.stepCount { stepCount = steps }
+        if let cfg = image.guidanceScale { guidanceScale = cfg }
+        showAdvanced = true
     }
 
     private func loadSettingsOnce() {
@@ -492,13 +602,12 @@ struct GenerateView: View {
 
     private func generate() {
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedPrompt.isEmpty else {
-            error = .emptyPrompt
-            return
-        }
+        guard !trimmedPrompt.isEmpty else { error = .emptyPrompt; return }
         guard selectedModel.isLocal || settingsStore.hasUserPuterToken else {
-            error = .missingPuterConnection
-            return
+            error = .missingPuterConnection; return
+        }
+        if selectedModel.isLocal, case .missing = localModelInstaller.state {
+            showInstaller = true; return
         }
         generationTask?.cancel()
         isPromptFocused = false
@@ -509,20 +618,26 @@ struct GenerateView: View {
         let composedPrompt = selectedStyle.apply(to: trimmedPrompt)
         visiblePrompt = trimmedPrompt
         let quality = selectedModel.supportsQuality ? selectedQuality?.rawValue : nil
-        let outputWidth = selectedModel.isLocal ? 768 : selectedAspect.width
+        let outputWidth  = selectedModel.isLocal ? 768 : selectedAspect.width
         let outputHeight = selectedModel.isLocal ? 768 : selectedAspect.height
+        let resolvedSeed = UInt32(seed.trimmingCharacters(in: .whitespaces))
+        let neg = negativePrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = ImageGenerationRequest(
             prompt: composedPrompt,
+            negativePrompt: neg.isEmpty ? nil : neg,
             model: selectedModel.backendModel,
             quality: quality,
             width: outputWidth,
             height: outputHeight,
-            responseFormat: .b64JSON
+            responseFormat: .b64JSON,
+            seed: resolvedSeed,
+            stepCount: selectedModel.isLocal ? stepCount : nil,
+            guidanceScale: selectedModel.isLocal ? guidanceScale : nil
         )
         let client = environment.imageClient
-        let store = historyStore
-
+        let store  = historyStore
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
         generationTask = Task {
             do {
                 let image = try await client.generate(request)
@@ -568,7 +683,39 @@ struct GenerateView: View {
             }
         }
     }
+
+    // MARK: - Formatting helpers
+
+    private func speedLabel(_ bps: Double) -> String {
+        guard bps > 0 else { return "" }
+        return ByteCountFormatter.string(fromByteCount: Int64(bps), countStyle: .file) + "/s"
+    }
+
+    private func etaLabel(_ seconds: Double) -> String {
+        if seconds < 60 { return "\(Int(seconds))s left" }
+        let m = Int(seconds / 60)
+        let s = Int(seconds) % 60
+        return "\(m)m \(s)s left"
+    }
 }
+
+// MARK: - LocalModelInstallPhase display title
+
+private extension LocalModelInstallPhase {
+    var displayTitle: String {
+        switch self {
+        case .queued:           return "Queued…"
+        case .downloading:      return "Downloading SDXL"
+        case .verifyingArchive: return "Verifying archive"
+        case .extracting:       return "Extracting model"
+        case .validatingFiles:  return "Validating files"
+        case .activating:       return "Activating model"
+        case .rollingBack:      return "Rolling back"
+        }
+    }
+}
+
+// MARK: - Quick actions (private)
 
 private struct QuickActionPreset: Identifiable {
     var id: String
@@ -579,42 +726,29 @@ private struct QuickActionPreset: Identifiable {
     var aspect: AspectPreset
 
     static let defaults: [QuickActionPreset] = [
-        QuickActionPreset(id: "app-icon", title: "App Icon", systemImage: "app.badge", prompt: "Minimal iOS app icon for an AI image studio, glossy dark glass, blue accent, no text", style: style("logo"), aspect: aspect("square")),
-        QuickActionPreset(id: "wallpaper", title: "Wallpaper", systemImage: "iphone", prompt: "Premium iPhone wallpaper, luminous abstract moonlit landscape, deep contrast, no text", style: style("wallpaper"), aspect: aspect("wallpaper")),
-        QuickActionPreset(id: "logo", title: "Logo", systemImage: "seal", prompt: "Clean logo mark for a fast creative AI studio, simple geometry, no text", style: style("logo"), aspect: aspect("square")),
-        QuickActionPreset(id: "product", title: "Product Shot", systemImage: "shippingbox", prompt: "Luxury product photo on dark reflective glass, studio lighting, premium composition", style: style("realistic"), aspect: aspect("social-4x5")),
-        QuickActionPreset(id: "character", title: "Character", systemImage: "person.crop.circle", prompt: "Original heroic character portrait, dramatic lighting, detailed face, cinematic mood", style: style("cinematic"), aspect: aspect("social-4x5")),
-        QuickActionPreset(id: "social", title: "Social Post", systemImage: "rectangle.portrait", prompt: "Eye-catching social media artwork, bold central subject, clean negative space, no text", style: style("cinematic"), aspect: aspect("social-4x5")),
-        QuickActionPreset(id: "render", title: "3D Render", systemImage: "cube.transparent", prompt: "Futuristic 3D object render, polished material, soft studio shadows, high detail", style: style("3d"), aspect: aspect("square")),
-        QuickActionPreset(id: "cinematic", title: "Cinematic", systemImage: "movieclapper", prompt: "Cinematic neon city at night, rain, reflections, dramatic film still lighting", style: style("cinematic"), aspect: aspect("landscape")),
+        QuickActionPreset(id: "app-icon",  title: "App Icon",     systemImage: "app.badge",               prompt: "Minimal iOS app icon for an AI image studio, glossy dark glass, blue accent, no text",                     style: style("logo"),      aspect: aspect("square")),
+        QuickActionPreset(id: "wallpaper", title: "Wallpaper",    systemImage: "iphone",                  prompt: "Premium iPhone wallpaper, luminous abstract moonlit landscape, deep contrast, no text",                  style: style("wallpaper"), aspect: aspect("wallpaper")),
+        QuickActionPreset(id: "logo",      title: "Logo",         systemImage: "seal",                    prompt: "Clean logo mark for a fast creative AI studio, simple geometry, no text",                               style: style("logo"),      aspect: aspect("square")),
+        QuickActionPreset(id: "product",   title: "Product Shot", systemImage: "shippingbox",             prompt: "Luxury product photo on dark reflective glass, studio lighting, premium composition",                    style: style("realistic"), aspect: aspect("social-4x5")),
+        QuickActionPreset(id: "character", title: "Character",    systemImage: "person.crop.circle",      prompt: "Original heroic character portrait, dramatic lighting, detailed face, cinematic mood",                   style: style("cinematic"), aspect: aspect("social-4x5")),
+        QuickActionPreset(id: "social",    title: "Social Post",  systemImage: "rectangle.portrait",      prompt: "Eye-catching social media artwork, bold central subject, clean negative space, no text",                style: style("cinematic"), aspect: aspect("social-4x5")),
+        QuickActionPreset(id: "render",    title: "3D Render",    systemImage: "cube.transparent",        prompt: "Futuristic 3D object render, polished material, soft studio shadows, high detail",                      style: style("3d"),        aspect: aspect("square")),
+        QuickActionPreset(id: "cinematic", title: "Cinematic",    systemImage: "movieclapper",            prompt: "Cinematic neon city at night, rain, reflections, dramatic film still lighting",                         style: style("cinematic"), aspect: aspect("landscape")),
     ]
-
-    private static func style(_ id: String) -> StylePreset {
-        StylePreset.presets.first { $0.id == id } ?? StylePreset.defaultPreset
-    }
-
-    private static func aspect(_ id: String) -> AspectPreset {
-        AspectPreset.presets.first { $0.id == id } ?? AspectPreset.fallback
-    }
+    private static func style(_ id: String) -> StylePreset { StylePreset.presets.first { $0.id == id } ?? StylePreset.defaultPreset }
+    private static func aspect(_ id: String) -> AspectPreset { AspectPreset.presets.first { $0.id == id } ?? AspectPreset.fallback }
 }
 
 private struct QuickActionGrid: View {
     var actions: [QuickActionPreset]
     var onSelect: (QuickActionPreset) -> Void
-
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 9)], spacing: 9) {
             ForEach(actions) { action in
-                Button {
-                    onSelect(action)
-                } label: {
+                Button { onSelect(action) } label: {
                     HStack(spacing: 7) {
-                        Image(systemName: action.systemImage)
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(action.title)
-                            .font(.caption.weight(.semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.76)
+                        Image(systemName: action.systemImage).font(.system(size: 14, weight: .semibold))
+                        Text(action.title).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.76)
                     }
                     .foregroundStyle(.white.opacity(0.86))
                     .frame(maxWidth: .infinity, minHeight: 38)

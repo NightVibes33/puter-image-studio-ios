@@ -4,241 +4,255 @@ struct SettingsView: View {
     @EnvironmentObject private var settingsStore: AppSettingsStore
     @EnvironmentObject private var historyStore: GenerationHistoryStore
     @EnvironmentObject private var localModelInstaller: LocalModelInstallerStore
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
-    @State private var showClearConfirmation = false
+
+    @State private var showClearHistoryConfirm = false
+    @State private var showInstaller = false
+    @State private var showDeleteModelConfirm = false
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Defaults") {
-                    Picker("Model", selection: $settingsStore.defaultModelID) {
-                        ForEach(ImageModel.presets) { model in
-                            Text(model.title).tag(model.id)
-                        }
-                    }
-
-                    let model = ImageModel.preset(id: settingsStore.defaultModelID)
-                    if model.supportsQuality {
-                        Picker("Quality", selection: Binding(
-                            get: { settingsStore.defaultQuality(for: model) ?? model.defaultQuality ?? model.supportedQualities[0] },
-                            set: { settingsStore.setDefaultQuality($0) }
-                        )) {
-                            ForEach(model.supportedQualities) { quality in
-                                Text(quality.title).tag(quality)
-                            }
-                        }
-                    }
-                }
-
-                Section("Local Generation") {
-                    localGenerationStatus
-                    localGenerationControls
-                    Link("Model source", destination: LocalStableDiffusionModelStore.downloadURL)
-                    Text("Downloads Apple\u2019s iOS SDXL Core ML model (~4 GB zip, ~10 GB installed). Keep ~10 GB free. Core ML compiles on first use.")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryInk)
-                }
-
-                Section("Puter Account") {
-                    if settingsStore.hasUserPuterToken {
-                        Label(settingsStore.userPuterUsername.isEmpty
-                              ? "Connected"
-                              : "Connected as \(settingsStore.userPuterUsername)",
-                              systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(AppTheme.success)
-                        Button("Disconnect Puter", role: .destructive) {
-                            settingsStore.clearPuterConnection()
-                        }
-                    } else {
-                        Button {
-                            openURL(settingsStore.puterAuthURL)
-                        } label: {
-                            Label("Connect Puter", systemImage: "person.crop.circle.badge.checkmark")
-                        }
-                    }
-                    DisclosureGroup("Advanced token") {
-                        SecureField("Auth token", text: $settingsStore.userPuterAuthToken)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .privacySensitive()
-                    }
-                    Text("Connect Puter so generation runs on the signed-in user\u2019s Puter session instead of the shared server token.")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryInk)
-                }
-
-                Section("Library") {
-                    Button("Clear History", role: .destructive) {
-                        showClearConfirmation = true
-                    }
-                    .disabled(historyStore.images.isEmpty)
-                }
-
-                Section("Privacy") {
-                    Text("Prompts and generated images are sent to the generation service and AI providers as needed.")
-                    Link("Privacy Policy", destination: settingsStore.privacyPolicyURL)
-                    Link("Terms", destination: settingsStore.termsURL)
-                }
-
-                Section("Support") {
-                    Link("GitHub Issues", destination: settingsStore.supportURL)
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text(appVersion)
-                            .foregroundStyle(AppTheme.secondaryInk)
-                    }
-                }
+                localModelSection
+                defaultsSection
+                historySection
+                aboutSection
             }
             .navigationTitle("Settings")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showInstaller) {
+                LocalModelInstallView()
+                    .environmentObject(localModelInstaller)
             }
-            .confirmationDialog("Clear all generated images?", isPresented: $showClearConfirmation, titleVisibility: .visible) {
-                Button("Clear History", role: .destructive) { historyStore.clear() }
+            .confirmationDialog(
+                "Remove the installed SDXL model?",
+                isPresented: $showDeleteModelConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Remove Model", role: .destructive) {
+                    localModelInstaller.deleteInstall()
+                }
                 Button("Cancel", role: .cancel) {}
             }
         }
     }
 
-    // MARK: - Local Generation Status
+    // MARK: - Local model section
 
-    @ViewBuilder
-    private var localGenerationStatus: some View {
-        switch localModelInstaller.state {
-        case .installed:
-            Label("Local SDXL installed", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(AppTheme.success)
+    private var localModelSection: some View {
+        Section {
+            // Phase row
+            HStack(spacing: 12) {
+                ZStack {
+                    if localModelInstaller.state.isBusy {
+                        Circle()
+                            .stroke(Color.secondary.opacity(0.20), lineWidth: 2.5)
+                            .frame(width: 32, height: 32)
+                        Circle()
+                            .trim(from: 0, to: localModelInstaller.state.overallProgress)
+                            .stroke(.accentColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .frame(width: 32, height: 32)
+                            .animation(.linear(duration: 0.3), value: localModelInstaller.state.overallProgress)
+                    }
+                    Image(systemName: statusIcon)
+                        .font(.system(size: localModelInstaller.state.isBusy ? 12 : 16, weight: .semibold))
+                        .foregroundStyle(statusTint)
+                }
+                .frame(width: 36, height: 36)
 
-        case .active(let phase, let progress, let speed, let eta):
-            VStack(alignment: .leading, spacing: 6) {
-                Label(phaseLabel(phase), systemImage: phaseIcon(phase))
-                    .foregroundStyle(AppTheme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(statusTitle).font(.body.weight(.semibold))
+                    Text(statusSubtitle).font(.caption).foregroundStyle(.secondary)
+                }
 
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .animation(.easeInOut(duration: 0.25), value: progress)
+                Spacer()
 
-                HStack {
-                    if phase == .download {
-                        Text(formatProgress(localModelInstaller))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(AppTheme.secondaryInk)
-                        Spacer()
-                        if speed > 0 {
-                            Text(formatSpeed(speed))
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(AppTheme.secondaryInk)
-                        }
-                        if let eta, eta > 1 {
-                            Text("\u2022 " + formatETA(eta))
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(AppTheme.secondaryInk)
-                        }
+                if localModelInstaller.state.isBusy {
+                    ProgressView()
+                }
+            }
+
+            // Action button row
+            switch localModelInstaller.state {
+            case .missing:
+                Button {
+                    showInstaller = true
+                } label: {
+                    Label(
+                        localModelInstaller.hasResumeData ? "Resume Download" : "Download & Install",
+                        systemImage: "arrow.down.circle"
+                    )
+                }
+
+            case .active:
+                Button(role: .destructive) {
+                    localModelInstaller.cancel()
+                } label: {
+                    Label("Cancel Installation", systemImage: "xmark.circle")
+                }
+
+            case .installed:
+                Button(role: .destructive) {
+                    showDeleteModelConfirm = true
+                } label: {
+                    Label("Remove Model", systemImage: "trash")
+                }
+                .foregroundStyle(.red)
+
+            case .failed(let e):
+                Button {
+                    if e.isRetryable {
+                        localModelInstaller.install()
                     } else {
-                        Text(String(format: "%.0f%%", progress * 100))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(AppTheme.secondaryInk)
+                        showInstaller = true
+                    }
+                } label: {
+                    Label(e.isRetryable ? "Retry" : "Reinstall", systemImage: "arrow.clockwise")
+                }
+            }
+
+        } header: {
+            Text("On-Device Model")
+        } footer: {
+            if let entry = localModelInstaller.modelEntry {
+                Text("SDXL Base v\(entry.version) · Requires \(entry.requiredFreeSpaceDescription) free during install · Runs fully offline after setup.")
+            } else {
+                Text("Runs fully offline after setup.")
+            }
+        }
+    }
+
+    private var statusIcon: String {
+        switch localModelInstaller.state {
+        case .missing:                        return "externaldrive.badge.plus"
+        case .active(let p, _, _, _, _):
+            switch p {
+            case .downloading:                return "arrow.down.circle.fill"
+            case .verifyingArchive:           return "checkmark.shield"
+            case .extracting:                 return "archivebox"
+            case .validatingFiles:            return "doc.badge.gearshape"
+            case .activating:                 return "bolt.circle"
+            case .rollingBack:                return "arrow.uturn.backward.circle"
+            case .queued:                     return "clock"
+            }
+        case .installed:                      return "checkmark.circle.fill"
+        case .failed:                         return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var statusTint: Color {
+        switch localModelInstaller.state {
+        case .installed:          return .green
+        case .failed, .missing:   return .orange
+        case .active:             return .accentColor
+        }
+    }
+
+    private var statusTitle: String {
+        switch localModelInstaller.state {
+        case .missing:                       return "SDXL Base — Not Installed"
+        case .active(let p, _, let o, _, _): return "\(p.settingsLabel) · \(Int(o * 100))%"
+        case .installed(let v):              return "SDXL Base v\(v) — Installed"
+        case .failed(let e):                 return e.errorDescription ?? "Install Failed"
+        }
+    }
+
+    private var statusSubtitle: String {
+        switch localModelInstaller.state {
+        case .missing:
+            return "On-device generation · No credits needed"
+        case .active(_, _, _, let speed, let eta):
+            var parts: [String] = []
+            if speed > 0 {
+                parts.append(ByteCountFormatter.string(fromByteCount: Int64(speed), countStyle: .file) + "/s")
+            }
+            if let eta {
+                parts.append(eta < 60 ? "\(Int(eta))s left" : "\(Int(eta/60))m \(Int(eta)%60)s left")
+            }
+            return parts.joined(separator: " · ")
+        case .installed:
+            return "Ready · Fully offline"
+        case .failed(let e):
+            return e.recoverySuggestion ?? "Tap to retry"
+        }
+    }
+
+    // MARK: - Defaults section
+
+    private var defaultsSection: some View {
+        Section("Generation Defaults") {
+            Picker("Default Model", selection: Binding(
+                get: { settingsStore.defaultModel },
+                set: { settingsStore.setDefaultModel($0) }
+            )) {
+                ForEach(ImageModel.presets) { model in
+                    Text(model.title).tag(model)
+                }
+            }
+
+            if settingsStore.defaultModel.supportsQuality {
+                Picker("Default Quality", selection: Binding(
+                    get: { settingsStore.defaultQuality(for: settingsStore.defaultModel) ?? .low },
+                    set: { settingsStore.setDefaultQuality($0, for: settingsStore.defaultModel) }
+                )) {
+                    ForEach(settingsStore.defaultModel.supportedQualities) { q in
+                        Text(q.title).tag(Optional(q))
                     }
                 }
             }
-            .padding(.vertical, 2)
-
-        case .failed(let message):
-            Label(message, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(AppTheme.warmAccent)
-
-        case .missing:
-            Label("Local SDXL not installed", systemImage: "externaldrive.badge.exclamationmark")
-                .foregroundStyle(AppTheme.secondaryInk)
         }
     }
 
-    // MARK: - Local Generation Controls
+    // MARK: - History section
 
-    @ViewBuilder
-    private var localGenerationControls: some View {
-        switch localModelInstaller.state {
-        case .installed:
-            Button("Verify Model") { localModelInstaller.refresh() }
-
-        case .active:
-            Button("Pause & Save Progress", role: .destructive) {
-                localModelInstaller.cancel()
+    private var historySection: some View {
+        Section("History") {
+            HStack {
+                Text("Saved images")
+                Spacer()
+                Text("\(historyStore.images.count)")
+                    .foregroundStyle(.secondary)
             }
-
-        case .missing:
-            Button {
-                localModelInstaller.install()
-            } label: {
-                // Show "Resume" if there is saved resume data
-                let hasResume = UserDefaults.standard.data(forKey: "localModelResumeData") != nil
-                Label(hasResume ? "Resume Download" : "Install Local SDXL",
-                      systemImage: hasResume ? "arrow.clockwise" : "arrow.down.circle")
+            Button("Clear All History", role: .destructive) {
+                showClearHistoryConfirm = true
             }
-
-        case .failed:
-            Button {
-                localModelInstaller.install()
-            } label: {
-                Label("Retry Install", systemImage: "arrow.clockwise")
+            .confirmationDialog(
+                "Delete all \(historyStore.images.count) generated images?",
+                isPresented: $showClearHistoryConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Clear History", role: .destructive) { historyStore.clearAll() }
+                Button("Cancel", role: .cancel) {}
             }
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - About section
 
-    private func phaseLabel(_ phase: LocalModelInstallPhase) -> String {
-        switch phase {
-        case .download: return "Downloading model\u2026"
-        case .unzip:    return "Unpacking\u2026"
-        case .move:     return "Finalising\u2026"
+    private var aboutSection: some View {
+        Section("About") {
+            LabeledContent("Version", value: appVersion)
+            LabeledContent("Local Model Engine", value: "Apple Core ML · Split Einsum")
         }
-    }
-
-    private func phaseIcon(_ phase: LocalModelInstallPhase) -> String {
-        switch phase {
-        case .download: return "arrow.down.circle"
-        case .unzip:    return "archivebox"
-        case .move:     return "arrow.right.circle"
-        }
-    }
-
-    private func formatProgress(_ store: LocalModelInstallerStore) -> String {
-        let written = store.bytesWrittenForUI
-        let expected = store.bytesExpectedForUI
-        if expected > 0 {
-            return "\(formatBytes(written)) / \(formatBytes(expected))"
-        }
-        return formatBytes(written)
-    }
-
-    private func formatBytes(_ bytes: Int64) -> String {
-        let gb = Double(bytes) / 1_073_741_824
-        if gb >= 1 { return String(format: "%.2f GB", gb) }
-        let mb = Double(bytes) / 1_048_576
-        return String(format: "%.1f MB", mb)
-    }
-
-    private func formatSpeed(_ bps: Double) -> String {
-        let mbs = bps / 1_048_576
-        if mbs >= 1 { return String(format: "%.1f MB/s", mbs) }
-        return String(format: "%.0f KB/s", bps / 1024)
-    }
-
-    private func formatETA(_ seconds: Double) -> String {
-        let s = Int(seconds)
-        if s < 60  { return "\(s)s left" }
-        if s < 3600 { return "\(s / 60)m left" }
-        return "\(s / 3600)h \((s % 3600) / 60)m left"
     }
 
     private var appVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "\(version) (\(build))"
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+        return "\(v) (\(b))"
+    }
+}
+
+private extension LocalModelInstallPhase {
+    var settingsLabel: String {
+        switch self {
+        case .queued:           return "Queued"
+        case .downloading:      return "Downloading"
+        case .verifyingArchive: return "Verifying"
+        case .extracting:       return "Extracting"
+        case .validatingFiles:  return "Validating"
+        case .activating:       return "Activating"
+        case .rollingBack:      return "Rolling Back"
+        }
     }
 }
