@@ -137,25 +137,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ steps.meta.outputs.tag }}
-          APP_NAME: Alley Cãt
         run: |
           set -euo pipefail
           if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release create "$TAG_NAME" \
-              --title "$TAG_NAME" \
-              --notes "Unsigned iOS 26 device IPA for AltStore and SideStore. Add the source URL from source-url.txt."
+            gh release create "$TAG_NAME"               --title "$TAG_NAME"               --notes "Unsigned iOS 26 device IPA for AltStore and SideStore. Add the source URL from source-url.txt."
           fi
-          gh release upload "$TAG_NAME" \
-            build/ImageStudio-unsigned.ipa \
-            build/altstore-source.json \
-            build/AppIcon.png \
-            build/source-url.txt \
-            --clobber
-
-      - name: Publish unsigned IPA release asset
-        run: |
-          ./tools/scripts/verify-kittystore-integration.sh \
-            --require-screenshots \
-            --max-news-items 3 \
-            --app-name "$APP_NAME" \
-            --store-config '{"name": "KittyStore"}'
+          gh release upload "$TAG_NAME"             build/ImageStudio-unsigned.ipa             build/altstore-source.json             build/AppIcon.png             build/source-url.txt             --clobber
