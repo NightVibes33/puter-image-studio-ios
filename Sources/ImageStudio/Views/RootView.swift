@@ -24,7 +24,7 @@ struct RootView: View {
         guard url.scheme == "imagestudio", url.host == "puter-auth" else { return }
         let values = authValues(from: url)
         guard let token = values["token"], !token.isEmpty else { return }
-        settingsStore.connectLocal(token: token, username: values["username"])
+        settingsStore.connectPuter(token: token, username: values["username"])
         dismissSplash()
     }
 
