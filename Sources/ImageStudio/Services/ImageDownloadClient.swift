@@ -1,6 +1,9 @@
 import Foundation
 import UIKit
 
+// ImageDownloadClient is used across actor boundaries (MainActor stores + detached Tasks).
+// It uses no mutable shared state across threads — URLSession.shared and FileManager.default
+// are both thread-safe, so @unchecked Sendable is correct here.
 final class ImageDownloadClient {
     private let session: URLSession
     private let fileManager: FileManager
@@ -59,18 +62,19 @@ final class ImageDownloadClient {
         let fallback = "\(UUID().uuidString).png"
         guard !fileName.isEmpty else { return fallback }
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
-        let filtered = fileName.unicodeScalars.map { allowed.contains($0) ? String($0) : "-" }.joined()
-        return filtered.hasSuffix(".png") ? filtered : "\(filtered).png"
+        let safe = fileName.unicodeScalars
+            .filter { allowed.contains($0) }
+            .map { String($0) }
+            .joined()
+        return safe.isEmpty ? fallback : safe
     }
 
-    private static func map(_ error: URLError) -> GenerationError {
+    static func map(_ error: URLError) -> GenerationError {
         switch error.code {
-        case .cancelled:
-            return .cancelled
+        case .notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost:
+            return .networkUnavailable
         case .timedOut:
             return .requestTimedOut
-        case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost:
-            return .networkUnavailable
         default:
             return .downloadFailed
         }

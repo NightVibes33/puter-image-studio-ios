@@ -21,6 +21,7 @@ final class MockImageGenerationClient: ImageGenerationClient {
             quality: request.quality,
             width: request.width,
             height: request.height,
+            createdAt: Date(),       // fix: was missing, caused compile error
             remoteURL: nil,
             localFileName: localFileName
         )
@@ -36,9 +37,11 @@ final class MockImageGenerationClient: ImageGenerationClient {
 
             let accent = UIColor(red: 0.18, green: 0.47, blue: 0.91, alpha: 1)
             accent.withAlphaComponent(0.35).setFill()
-            context.cgContext.fillEllipse(in: CGRect(x: size.width * 0.12, y: size.height * 0.10, width: size.width * 0.70, height: size.width * 0.70))
+            context.cgContext.fillEllipse(in: CGRect(x: size.width * 0.12, y: size.height * 0.10,
+                                                      width: size.width * 0.70, height: size.width * 0.70))
             UIColor(red: 0.96, green: 0.42, blue: 0.20, alpha: 1).withAlphaComponent(0.30).setFill()
-            context.cgContext.fillEllipse(in: CGRect(x: size.width * 0.35, y: size.height * 0.42, width: size.width * 0.55, height: size.width * 0.55))
+            context.cgContext.fillEllipse(in: CGRect(x: size.width * 0.35, y: size.height * 0.42,
+                                                      width: size.width * 0.55, height: size.width * 0.55))
 
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = .center
@@ -49,7 +52,8 @@ final class MockImageGenerationClient: ImageGenerationClient {
                 .paragraphStyle: paragraphStyle
             ]
             let text = prompt.isEmpty ? "Image Studio" : prompt
-            let textRect = CGRect(x: size.width * 0.10, y: size.height * 0.40, width: size.width * 0.80, height: size.height * 0.28)
+            let textRect = CGRect(x: size.width * 0.10, y: size.height * 0.40,
+                                  width: size.width * 0.80, height: size.height * 0.28)
             text.draw(in: textRect, withAttributes: attributes)
         }
 

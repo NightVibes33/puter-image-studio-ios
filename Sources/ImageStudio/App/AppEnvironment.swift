@@ -3,7 +3,8 @@ import SwiftUI
 
 @MainActor
 final class AppEnvironment: ObservableObject {
-    let imageClient: ImageGenerationClient
+    // Bound to Sendable so Swift 6 is satisfied when imageClient crosses actor boundaries
+    let imageClient: any ImageGenerationClient & Sendable
     let imageDownloadClient: ImageDownloadClient
     let photoLibrarySaver: PhotoLibrarySaver
     let historyStore: GenerationHistoryStore
@@ -11,7 +12,7 @@ final class AppEnvironment: ObservableObject {
     let localModelInstallerStore: LocalModelInstallerStore
 
     init(
-        imageClient: ImageGenerationClient,
+        imageClient: any ImageGenerationClient & Sendable,
         imageDownloadClient: ImageDownloadClient,
         photoLibrarySaver: PhotoLibrarySaver,
         historyStore: GenerationHistoryStore,
@@ -31,7 +32,7 @@ final class AppEnvironment: ObservableObject {
         let settingsStore = AppSettingsStore()
         let historyStore = GenerationHistoryStore(imageDownloadClient: imageDownloadClient)
         let localModelInstallerStore = LocalModelInstallerStore()
-        
+
         let localClient = LocalStableDiffusionImageGenerationClient(imageDownloadClient: imageDownloadClient)
         let client = LocalImageStudioClient(localClient: localClient)
 
