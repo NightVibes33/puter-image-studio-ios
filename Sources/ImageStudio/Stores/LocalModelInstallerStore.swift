@@ -1,14 +1,11 @@
 import Foundation
+import ZIPFoundation
 
 // StableDiffusion SPM package is intentionally excluded from the CI build.
-// ZIPFoundation is retained for the model download/unzip flow.
-// All StableDiffusion usage is behind #if canImport(StableDiffusion) in the generation client.
+// ZIPFoundation is a real SPM dependency — import it directly, not via canImport.
+// All StableDiffusion usage remains behind #if canImport(StableDiffusion) in the generation client.
 
-#if canImport(ZIPFoundation)
-import ZIPFoundation
-#endif
-
-enum LocalModelInstallState: Equatable {
+enum LocalModelInstallState: Equatable, Sendable {
     case missing
     case downloading
     case unpacking
@@ -72,7 +69,6 @@ final class LocalModelInstallerStore: ObservableObject {
     }
 
     private func downloadAndInstall() async throws {
-        #if canImport(ZIPFoundation)
         guard let targetURL = modelStore.applicationSupportResourceURL() else {
             throw GenerationError.localModelMissing
         }
@@ -91,7 +87,7 @@ final class LocalModelInstallerStore: ObservableObject {
         }
         try Task.checkCancellation()
 
-        await MainActor.run { state = .unpacking }
+        await MainActor.run { self.state = .unpacking }
         let archiveURL = stagingURL.appendingPathComponent("model.zip")
         try fileManager.moveItem(at: downloadedArchiveURL, to: archiveURL)
 
@@ -100,62 +96,31 @@ final class LocalModelInstallerStore: ObservableObject {
         try fileManager.unzipItem(at: archiveURL, to: extractedURL)
         try Task.checkCancellation()
 
-        let sourceURL = try resolvedModelFolder(in: extractedURL)
+        // Find the compiled model folder inside the zip
+        let expectedNested = extractedURL
+            .appendingPathComponent(LocalStableDiffusionModelStore.modelFolderName, isDirectory: true)
+        let sourceURL: URL
+        if fileManager.fileExists(atPath: expectedNested.path) {
+            sourceURL = expectedNested
+        } else {
+            // Zip may place contents at root level
+            sourceURL = extractedURL
+        }
+
         if fileManager.fileExists(atPath: targetURL.path) {
             try fileManager.removeItem(at: targetURL)
         }
         try fileManager.moveItem(at: sourceURL, to: targetURL)
-
-        guard modelStore.isUsableResourceDirectory(targetURL) else {
-            try? fileManager.removeItem(at: targetURL)
-            throw GenerationError.localModelMissing
-        }
-        #else
-        throw GenerationError.localEngineUnavailable
-        #endif
     }
 
     private func checkAvailableStorage(at url: URL) throws {
-        let values = try url.resourceValues(forKeys: [
-            .volumeAvailableCapacityForImportantUsageKey,
-            .volumeAvailableCapacityKey
-        ])
-        let generalCapacity = values.volumeAvailableCapacity.map(Int64.init)
-        let available = values.volumeAvailableCapacityForImportantUsage ?? generalCapacity ?? 0
-        guard available >= Self.requiredFreeBytes else {
-            let availableGB = Double(max(available, 0)) / 1_073_741_824
+        let values = try url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        let available = values.volumeAvailableCapacityForImportantUsage ?? 0
+        if available < Self.requiredFreeBytes {
+            let gb = String(format: "%.1f GB", Double(available) / 1_073_741_824)
             throw GenerationError.localModelStorageTooLow(
-                "Local SDXL needs about 10 GB free. This device currently reports \(String(format: "%.1f", availableGB)) GB available."
+                "Not enough storage to install the local model. \(gb) available, 10 GB required."
             )
         }
-    }
-
-    private func resolvedModelFolder(in extractedURL: URL) throws -> URL {
-        let expectedURL = extractedURL.appendingPathComponent(LocalStableDiffusionModelStore.modelFolderName, isDirectory: true)
-        if modelStore.isUsableResourceDirectory(expectedURL) {
-            return expectedURL
-        }
-
-        let childURLs = try fileManager.contentsOfDirectory(
-            at: extractedURL,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        )
-        if let match = childURLs.first(where: { modelStore.isUsableResourceDirectory($0) }) {
-            return match
-        }
-
-        for childURL in childURLs {
-            let nestedURLs = (try? fileManager.contentsOfDirectory(
-                at: childURL,
-                includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles]
-            )) ?? []
-            if let match = nestedURLs.first(where: { modelStore.isUsableResourceDirectory($0) }) {
-                return match
-            }
-        }
-
-        throw GenerationError.localModelMissing
     }
 }
