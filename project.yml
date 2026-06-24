@@ -1,4 +1,4 @@
-name: PuterImageStudio
+name: ImageStudio
 options:
   bundleIdPrefix: com.nightvibes
   deploymentTarget:
@@ -21,25 +21,24 @@ packages:
     url: https://github.com/weichsel/ZIPFoundation.git
     from: 0.9.19
 targets:
-  PuterImageStudio:
+  ImageStudio:
     type: application
     platform: iOS
     sources:
-      - path: Sources/PuterImageStudio
+      - path: Sources/ImageStudio
     dependencies:
       - package: StableDiffusion
         product: StableDiffusion
       - package: ZIPFoundation
         product: ZIPFoundation
     info:
-      path: Sources/PuterImageStudio/App/Info.plist
+      path: Sources/ImageStudio/App/Info.plist
       properties:
         CFBundleDisplayName: Image Studio
         CFBundleURLTypes:
           - CFBundleURLName: com.nightvibes.imagestudio
             CFBundleURLSchemes:
               - imagestudio
-        IMAGE_API_BASE_URL: $(IMAGE_API_BASE_URL)
         NSPhotoLibraryAddUsageDescription: Image Studio saves generated artwork only when you tap Save.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
@@ -58,27 +57,22 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudio
         PRODUCT_NAME: Image Studio
-        INFOPLIST_FILE: Sources/PuterImageStudio/App/Info.plist
+        INFOPLIST_FILE: Sources/ImageStudio/App/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Manual
         DEVELOPMENT_TEAM: ""
-      configs:
-        Debug:
-          IMAGE_API_BASE_URL: http://127.0.0.1:8787
-        Release:
-          IMAGE_API_BASE_URL: ""
     scheme:
       testTargets:
-        - PuterImageStudioTests
-  PuterImageStudioTests:
+        - ImageStudioTests
+  ImageStudioTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: Tests/PuterImageStudioTests
+      - path: Tests/ImageStudioTests
     dependencies:
-      - target: PuterImageStudio
+      - target: ImageStudio
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudioTests
