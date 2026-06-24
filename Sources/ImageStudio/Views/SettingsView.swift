@@ -48,11 +48,11 @@ struct SettingsView: View {
                             .stroke(Color.secondary.opacity(0.20), lineWidth: 2.5)
                             .frame(width: 32, height: 32)
                         Circle()
-                            .trim(from: 0, to: localModelInstaller.state.overallProgress)
-                            .stroke(.accentColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                            .trim(from: 0, to: activeOverallProgress)
+                            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .frame(width: 32, height: 32)
-                            .animation(.linear(duration: 0.3), value: localModelInstaller.state.overallProgress)
+                            .animation(.linear(duration: 0.3), value: activeOverallProgress)
                     }
                     Image(systemName: statusIcon)
                         .font(.system(size: localModelInstaller.state.isBusy ? 12 : 16, weight: .semibold))
@@ -122,6 +122,14 @@ struct SettingsView: View {
         }
     }
 
+    /// Extract `overallProgress` from the `.active` enum case; 0 otherwise.
+    private var activeOverallProgress: Double {
+        if case .active(_, _, let overall, _, _) = localModelInstaller.state {
+            return overall
+        }
+        return 0
+    }
+
     private var statusIcon: String {
         switch localModelInstaller.state {
         case .missing:                        return "externaldrive.badge.plus"
@@ -183,7 +191,7 @@ struct SettingsView: View {
         Section("Generation Defaults") {
             Picker("Default Model", selection: Binding(
                 get: { settingsStore.defaultModel },
-                set: { settingsStore.setDefaultModel($0) }
+                set: { settingsStore.defaultModelID = $0.id }
             )) {
                 ForEach(ImageModel.presets) { model in
                     Text(model.title).tag(model)
@@ -221,7 +229,7 @@ struct SettingsView: View {
                 isPresented: $showClearHistoryConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Clear History", role: .destructive) { historyStore.clearAll() }
+                Button("Clear History", role: .destructive) { historyStore.clear() }
                 Button("Cancel", role: .cancel) {}
             }
         }
