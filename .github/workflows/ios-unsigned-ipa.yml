@@ -10,37 +10,20 @@ on:
 
 jobs:
   build:
-    name: Build unsigned iOS 26 device IPA
+    name: Build unsigned iOS IPA
     runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode (26 preferred, latest fallback)
+      - name: Select latest available Xcode
         run: |
-          # Try Xcode 26 beta/release first, fall back to latest available
-          if ls /Applications/Xcode_26*.app 2>/dev/null | head -1 | grep -q Xcode; then
-            XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
-            sudo xcode-select -s "$XCODE/Contents/Developer"
-          elif ls /Applications/Xcode_16*.app 2>/dev/null | head -1 | grep -q Xcode; then
-            XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
-            sudo xcode-select -s "$XCODE/Contents/Developer"
-          else
-            sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          fi
+          # Pick highest-versioned Xcode available on the runner
+          XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
           xcodebuild -version
-          xcodebuild -showsdks
-
-      - name: Lower deployment target if iOS 26 SDK unavailable
-        run: |
-          SDK=$(xcodebuild -showsdks 2>/dev/null | grep iphoneos | tail -1 | grep -oE 'iphoneos[0-9.]+' | grep -oE '[0-9.]+')
-          echo "Available iOS SDK: $SDK"
-          # If SDK < 26, patch project.yml to use available SDK
-          if [ "$(echo "$SDK < 26" | bc)" = "1" ]; then
-            echo "iOS 26 SDK not available, patching project.yml to iOS $SDK"
-            sed -i '' "s/iOS: \"26.0\"/iOS: \"$SDK\"/" project.yml
-            sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET: \"26.0\"/IPHONEOS_DEPLOYMENT_TARGET: \"$SDK\"/" project.yml
-          fi
+          xcodebuild -showsdks | grep iphoneos
 
       - name: Install XcodeGen
         run: brew install xcodegen
