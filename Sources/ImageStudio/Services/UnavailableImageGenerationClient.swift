@@ -1,1 +1,9 @@
-Failed to get file contents. The path does not point to a file or directory, or the file does not exist in the repository.
+import Foundation
+
+struct UnavailableImageGenerationClient: ImageGenerationClient {
+    var error: GenerationError
+
+    func generate(_ request: ImageGenerationRequest) async throws -> GeneratedImage {
+        throw error
+    }
+}
