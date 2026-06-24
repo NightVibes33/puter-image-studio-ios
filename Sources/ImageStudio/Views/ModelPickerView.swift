@@ -57,7 +57,7 @@ struct ModelPickerView: View {
 
                 if selectedModel.id == model.id {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(.accentColor)
+                        .foregroundStyle(AppTheme.accent)
                         .font(.body.weight(.bold))
                 }
             }
@@ -78,7 +78,7 @@ struct ModelPickerView: View {
                         Spacer()
                         if selectedQuality == quality {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(.accentColor)
+                                .foregroundStyle(AppTheme.accent)
                         }
                     }
                     .contentShape(Rectangle())

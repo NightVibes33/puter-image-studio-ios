@@ -48,7 +48,7 @@ struct SettingsView: View {
                             .frame(width: 32, height: 32)
                         Circle()
                             .trim(from: 0, to: activeOverallProgress)
-                            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                            .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .frame(width: 32, height: 32)
                             .animation(.linear(duration: 0.3), value: activeOverallProgress)
@@ -150,7 +150,7 @@ struct SettingsView: View {
         switch localModelInstaller.state {
         case .installed:          return .green
         case .failed, .missing:   return .orange
-        case .active:             return .accentColor
+        case .active:             return AppTheme.accent
         }
     }
 

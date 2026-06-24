@@ -31,6 +31,10 @@ final class GenerationHistoryStore: ObservableObject {
         save()
     }
 
+    func remove(_ image: GeneratedImage) {
+        delete(image)
+    }
+
     func clear() {
         images.forEach { imageDownloadClient.delete(fileName: $0.localFileName) }
         images = []

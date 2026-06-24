@@ -5,7 +5,7 @@ enum AppTheme {
     // MARK: - Colours
 
     /// Primary teal/blue accent — matches the app tint.
-    static let accent: Color = .accentColor
+    static let accent: Color = Color(red: 0.18, green: 0.47, blue: 0.91)
 
     /// Warm amber/orange used for warnings, missing-state indicators.
     static let warmAccent: Color = Color(red: 0.96, green: 0.55, blue: 0.22)
@@ -27,4 +27,7 @@ enum AppTheme {
 
     // MARK: - Shape
     static let cornerRadius: CGFloat = 12
+
+    // MARK: - Layout
+    static let controlHeight: CGFloat = 48
 }

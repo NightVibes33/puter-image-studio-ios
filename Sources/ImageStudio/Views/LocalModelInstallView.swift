@@ -82,7 +82,7 @@ struct LocalModelInstallView: View {
         case .installed:  return .green
         case .failed:     return .orange
         case .missing:    return .secondary
-        case .active:     return .accentColor
+        case .active:     return AppTheme.accent
         }
     }
 
@@ -123,7 +123,7 @@ struct LocalModelInstallView: View {
             // Phase progress bar (shows current-phase granularity)
             if installer.state.isBusy {
                 ProgressView(value: installer.state.phaseProgress)
-                    .tint(.accentColor)
+                    .tint(AppTheme.accent)
                     .animation(.linear(duration: 0.3), value: installer.state.phaseProgress)
             }
 

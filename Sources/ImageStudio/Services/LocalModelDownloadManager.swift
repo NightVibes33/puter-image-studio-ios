@@ -125,7 +125,7 @@ final class LocalModelDownloadManager: NSObject {
     // MARK: - Private
 
     private func saveResumeDataAndCancel() {
-        downloadTask?.cancel(cancelingByProducingResumeData: { [weak self] data in
+        downloadTask?.cancel(byProducingResumeData: { [weak self] data in
             guard let self, let data else { return }
             let url = Self.resumeDataURL(modelID: self.modelID)
             try? FileManager.default.createDirectory(
@@ -239,7 +239,7 @@ extension LocalModelDownloadManager: URLSessionDownloadDelegate {
                 if currentMirrorIndex < archiveURLs.count,
                    let session = backgroundSession {
                     let nextTask = session.downloadTask(with: archiveURLs[currentMirrorIndex])
-                    downloadTask.resume()
+                    nextTask.resume()
                     _ = nextTask
                     return
                 }

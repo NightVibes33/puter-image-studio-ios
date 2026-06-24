@@ -46,6 +46,11 @@ enum LocalModelInstallState: Equatable, Sendable {
         return 0
     }
 
+    var overallProgress: Double {
+        if case .active(_, _, let overall, _, _) = self { return overall }
+        return 0
+    }
+
     var phaseProgress: Double {
         if case .active(_, let p, _, _, _) = self { return p }
         return 0

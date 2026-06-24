@@ -79,6 +79,10 @@ struct ImageModel: Identifiable, Codable, Equatable, Hashable, Sendable {
     static func preset(id: String) -> ImageModel {
         presets.first { $0.id == id } ?? fallback
     }
+
+    static var localModels: [ImageModel] {
+        presets.filter(\.isLocal)
+    }
 }
 
 enum ImageQuality: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
