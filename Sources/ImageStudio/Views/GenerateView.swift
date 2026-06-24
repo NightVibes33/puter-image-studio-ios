@@ -619,10 +619,10 @@ struct GenerateView: View {
             quality: quality,
             width: outputWidth,
             height: outputHeight,
-            responseFormat: .b64JSON,
             seed: resolvedSeed,
             stepCount: selectedModel.isLocal ? stepCount : nil,
-            guidanceScale: selectedModel.isLocal ? guidanceScale : nil
+            guidanceScale: selectedModel.isLocal ? guidanceScale : nil,
+            responseFormat: .b64JSON
         )
         let client = environment.imageClient
         let store  = historyStore
