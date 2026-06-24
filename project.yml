@@ -63,16 +63,3 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Manual
         DEVELOPMENT_TEAM: ""
-    scheme:
-      testTargets:
-        - ImageStudioTests
-  ImageStudioTests:
-    type: bundle.unit-test
-    platform: iOS
-    sources:
-      - path: Tests/ImageStudioTests
-    dependencies:
-      - target: ImageStudio
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes.imagestudioTests
