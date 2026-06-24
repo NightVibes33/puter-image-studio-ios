@@ -176,7 +176,7 @@ struct GenerateView: View {
                 .frame(maxWidth: .infinity, minHeight: 320)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(alignment: .bottomTrailing) {
-                    Text("\(currentImage.width) \u00d7 \(currentImage.height)")
+                    Text("\(currentImage.width) × \(currentImage.height)")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 9).padding(.vertical, 6)
@@ -283,15 +283,15 @@ struct GenerateView: View {
         switch localModelInstaller.state {
         case .missing:
             if let entry = localModelInstaller.modelEntry {
-                return "Requires \(entry.requiredFreeSpaceDescription) free \u00b7 On-device, no credits."
+                return "Requires \(entry.requiredFreeSpaceDescription) free · On-device, no credits."
             }
             return "Tap to install the local model."
         case .active(_, _, let overall, let speed, let eta):
             let pct = Int(overall * 100)
             if let eta {
-                return "\(pct)% \u00b7 \(speedLabel(speed)) \u00b7 \(etaLabel(eta))"
+                return "\(pct)% · \(speedLabel(speed)) · \(etaLabel(eta))"
             }
-            return "\(pct)% \u00b7 \(speedLabel(speed))"
+            return "\(pct)% · \(speedLabel(speed))"
         case .installed:
             return "Ready for on-device generation."
         case .failed(let e):
@@ -347,7 +347,7 @@ struct GenerateView: View {
                         .scrollContentBackground(.hidden)
                         .background(.clear)
                     if negativePrompt.isEmpty {
-                        Text("Negative prompt (optional)\u2026")
+                        Text("Negative prompt (optional)…")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.35))
                             .padding(.horizontal, 17).padding(.vertical, 17)
@@ -694,7 +694,7 @@ struct GenerateView: View {
 private extension LocalModelInstallPhase {
     var displayTitle: String {
         switch self {
-        case .queued:           return "Queued\u2026"
+        case .queued:           return "Queued…"
         case .downloading:      return "Downloading SDXL"
         case .verifyingArchive: return "Verifying archive"
         case .extracting:       return "Extracting model"
