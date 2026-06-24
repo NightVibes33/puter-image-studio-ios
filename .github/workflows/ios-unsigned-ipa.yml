@@ -92,6 +92,16 @@ jobs:
           echo "::error::Set IMAGE_API_BASE_URL to deployed HTTPS, leave it empty for local-only generation, or pass api_base_url=http://127.0.0.1:8787 with allow_localhost_api=true for a local fallback API build."
           exit 1
 
+      - name: Verify KittyStore integration
+        run: |
+          set -euo pipefail
+          if [ -f "Scripts/verify_kittystore_integration.sh" ]; then
+            cd "${{ github.workspace }}"
+            ./Scripts/verify_kittystore_integration.sh
+          else
+            echo "::warning::KittyStore verification script missing in this branch."
+          fi
+
       - name: Generate Xcode project
         run: xcodegen generate
 
@@ -140,6 +150,13 @@ jobs:
         run: |
           set -euo pipefail
           if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release create "$TAG_NAME"               --title "$TAG_NAME"               --notes "Unsigned iOS 26 device IPA for AltStore and SideStore. Add the source URL from source-url.txt."
+            gh release create "$TAG_NAME" \
+              --title "$TAG_NAME" \
+              --notes "Unsigned iOS 26 device IPA for AltStore and SideStore. Add the source URL from source-url.txt."
           fi
-          gh release upload "$TAG_NAME"             build/ImageStudio-unsigned.ipa             build/altstore-source.json             build/AppIcon.png             build/source-url.txt             --clobber
+          gh release upload "$TAG_NAME" \
+            build/ImageStudio-unsigned.ipa \
+            build/altstore-source.json \
+            build/AppIcon.png \
+            build/source-url.txt \
+            --clobber
