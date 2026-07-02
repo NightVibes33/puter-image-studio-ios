@@ -585,10 +585,10 @@ struct GenerateView: View {
             quality: nil,
             width: outputWidth,
             height: outputHeight,
-            responseFormat: .b64JSON,
             seed: resolvedSeed,
             stepCount: stepCount,
-            guidanceScale: guidanceScale
+            guidanceScale: guidanceScale,
+            responseFormat: .b64JSON
         )
         let client = environment.imageClient
         let store  = historyStore
