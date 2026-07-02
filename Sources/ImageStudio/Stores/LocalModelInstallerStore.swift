@@ -54,7 +54,7 @@ final class LocalModelInstallerStore: ObservableObject {
     /// Returns nil if there is enough space, or the required bytes if not.
     var insufficientSpaceBytes: Int64? {
         guard let entry = catalog.entry(id: modelID) else { return nil }
-        let required = entry.requiredBytes
+        let required = entry.requiredFreeBytes
         guard let available = availableDiskBytes() else { return nil }
         // Require at least 2x the compressed size as working room (download + extract)
         let needed = Int64(Double(required) * 2.2)
@@ -83,7 +83,6 @@ final class LocalModelInstallerStore: ObservableObject {
         }
         // Disk space pre-check — fail fast with a clear error rather than crashing mid-download
         if let needed = insufficientSpaceBytes {
-            let gb = String(format: "%.1f", Double(needed) / 1_000_000_000)
             state = .failed(.insufficientDiskSpace(requiredBytes: needed))
             return
         }

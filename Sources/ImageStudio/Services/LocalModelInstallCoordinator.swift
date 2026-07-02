@@ -86,7 +86,7 @@ final class LocalModelInstallCoordinator {
         } catch let e as LocalModelInstallError {
             onError?(e)
         } catch {
-            onError?(.activationFailed(reason: error.localizedDescription))
+            onError?(.activationFailed(error.localizedDescription))
         }
     }
 
@@ -99,7 +99,7 @@ final class LocalModelInstallCoordinator {
     private func installParentURL() throws -> URL {
         guard let support = fileManager
             .urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            throw LocalModelInstallError.activationFailed(reason: "Cannot resolve ApplicationSupport directory")
+            throw LocalModelInstallError.activationFailed("Cannot resolve ApplicationSupport directory")
         }
         let parent = support.appendingPathComponent("LocalModels", isDirectory: true)
         try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
@@ -110,10 +110,7 @@ final class LocalModelInstallCoordinator {
         let values = try url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
         let available = values.volumeAvailableCapacityForImportantUsage ?? 0
         if available < entry.requiredFreeBytes {
-            throw LocalModelInstallError.storageTooLow(
-                available: available,
-                required: entry.requiredFreeBytes
-            )
+            throw LocalModelInstallError.insufficientDiskSpace(requiredBytes: entry.requiredFreeBytes)
         }
     }
 
@@ -142,7 +139,7 @@ final class LocalModelInstallCoordinator {
                     try FileManager.default.unzipItem(at: archive, to: destination, progress: progress)
                     cont.resume()
                 } catch {
-                    cont.resume(throwing: LocalModelInstallError.extractionFailed(reason: error.localizedDescription))
+                    cont.resume(throwing: LocalModelInstallError.extractionFailed(error.localizedDescription))
                 }
             }
         }
@@ -158,7 +155,7 @@ final class LocalModelInstallCoordinator {
             !fileManager.fileExists(atPath: url.appendingPathComponent(name).path)
         }
         guard missing.isEmpty else {
-            throw LocalModelInstallError.validationFailed(missingFiles: missing)
+            throw LocalModelInstallError.validationFailed(missing.joined(separator: ", "))
         }
     }
 
@@ -179,7 +176,7 @@ final class LocalModelInstallCoordinator {
         do {
             try fileManager.moveItem(at: source, to: versionedDest)
         } catch {
-            throw LocalModelInstallError.activationFailed(reason: error.localizedDescription)
+            throw LocalModelInstallError.activationFailed(error.localizedDescription)
         }
 
         // Atomic symlink swap

@@ -144,7 +144,7 @@ final class LocalModelDownloadManager: NSObject {
         let digest = SHA256.hash(data: data)
         let actual = digest.map { String(format: "%02x", $0) }.joined()
         guard actual.lowercased() == expected.lowercased() else {
-            throw LocalModelInstallError.checksumMismatch(expected: expected, actual: actual)
+            throw LocalModelInstallError.checksumMismatch
         }
     }
 
@@ -180,7 +180,7 @@ extension LocalModelDownloadManager: URLSessionDownloadDelegate {
         didFinishDownloadingTo location: URL
     ) {
         guard let dest = pendingDestination else {
-            continuation?.resume(throwing: LocalModelInstallError.downloadFailed(reason: "Missing destination"))
+            continuation?.resume(throwing: LocalModelInstallError.downloadFailed("Missing destination"))
             continuation = nil
             return
         }
@@ -192,7 +192,7 @@ extension LocalModelDownloadManager: URLSessionDownloadDelegate {
             continuation?.resume(returning: dest)
             continuation = nil
         } catch {
-            continuation?.resume(throwing: LocalModelInstallError.downloadFailed(reason: error.localizedDescription))
+            continuation?.resume(throwing: LocalModelInstallError.downloadFailed(error.localizedDescription))
             continuation = nil
         }
     }
@@ -228,9 +228,9 @@ extension LocalModelDownloadManager: URLSessionDownloadDelegate {
         if let urlError = error as? URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost:
-                mapped = .networkUnavailable
+                mapped = .downloadFailed("No internet connection")
             case .timedOut:
-                mapped = .timedOut
+                mapped = .downloadFailed("Request timed out")
             case .cancelled:
                 return
             default:
@@ -243,10 +243,10 @@ extension LocalModelDownloadManager: URLSessionDownloadDelegate {
                     _ = nextTask
                     return
                 }
-                mapped = .downloadFailed(reason: urlError.localizedDescription)
+                mapped = .downloadFailed(urlError.localizedDescription)
             }
         } else {
-            mapped = .downloadFailed(reason: error.localizedDescription)
+            mapped = .downloadFailed(error.localizedDescription)
         }
         continuation?.resume(throwing: mapped)
         continuation = nil
@@ -255,7 +255,7 @@ extension LocalModelDownloadManager: URLSessionDownloadDelegate {
     nonisolated func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
         guard continuation != nil else { return }
         continuation?.resume(throwing: LocalModelInstallError.downloadFailed(
-            reason: error?.localizedDescription ?? "Session invalidated"
+            error?.localizedDescription ?? "Session invalidated"
         ))
         continuation = nil
     }
