@@ -24,8 +24,13 @@ struct ModelPickerView: View {
     private func modelRow(_ model: ImageModel) -> some View {
         Button {
             selectedModel = model
-            if case .missing = installerStore.state {
+            switch installerStore.state {
+            case .missing:
                 showInstaller = true
+            case .unsupportedDevice:
+                break
+            default:
+                break
             }
         } label: {
             HStack(spacing: 12) {
@@ -83,6 +88,12 @@ struct ModelPickerView: View {
             Text("Not installed")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+        case .unsupportedDevice:
+            Text("Unsupported")
+                .font(.caption2.weight(.bold))
+                .padding(.horizontal, 7).padding(.vertical, 3)
+                .background(.orange.opacity(0.15), in: Capsule())
+                .foregroundStyle(.orange)
         }
     }
 }
