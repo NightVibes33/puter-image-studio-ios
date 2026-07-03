@@ -29,15 +29,8 @@
 	<true/>
 	<key>CFBundleDisplayName</key>
 	<string>Image Studio</string>
-	<key>IMAGE_API_BASE_URL</key>
-	<string>$(IMAGE_API_BASE_URL)</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Image Studio saves generated artwork only when you tap Save.</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

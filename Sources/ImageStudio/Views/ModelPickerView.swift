@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ModelPickerView: View {
     @Binding var selectedModel: ImageModel
-    @Binding var selectedQuality: ImageQuality?
     @EnvironmentObject private var installerStore: LocalModelInstallerStore
     @State private var showInstaller = false
 
@@ -13,13 +12,8 @@ struct ModelPickerView: View {
                     modelRow(model)
                 }
             }
-            Section("Cloud") {
-                ForEach(ImageModel.presets.filter { !$0.isLocal }) { model in
-                    modelRow(model)
-                }
-            }
         }
-        .navigationTitle("Choose Model")
+        .navigationTitle("Local Model")
         .sheet(isPresented: $showInstaller) {
             LocalModelInstallView()
                 .environmentObject(installerStore)
@@ -30,16 +24,14 @@ struct ModelPickerView: View {
     private func modelRow(_ model: ImageModel) -> some View {
         Button {
             selectedModel = model
-            selectedQuality = model.defaultQuality
-            // Trigger installer sheet if local model not yet installed
-            if model.isLocal {
-                if case .missing = installerStore.state { showInstaller = true }
+            if case .missing = installerStore.state {
+                showInstaller = true
             }
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: model.isLocal ? "cpu" : "cloud")
+                Image(systemName: "cpu")
                     .frame(width: 28)
-                    .foregroundStyle(model.isLocal ? .green : .blue)
+                    .foregroundStyle(.green)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.title).font(.body.weight(.semibold))
@@ -50,10 +42,7 @@ struct ModelPickerView: View {
 
                 Spacer()
 
-                // Local install state chip
-                if model.isLocal {
-                    localStateBadge
-                }
+                localStateBadge
 
                 if selectedModel.id == model.id {
                     Image(systemName: "checkmark")
@@ -64,28 +53,6 @@ struct ModelPickerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-
-        // Quality picker inline for selected cloud model with quality support
-        if selectedModel.id == model.id && model.supportsQuality {
-            ForEach(model.supportedQualities) { quality in
-                Button {
-                    selectedQuality = quality
-                } label: {
-                    HStack {
-                        Text(quality.title)
-                            .font(.subheadline)
-                            .padding(.leading, 40)
-                        Spacer()
-                        if selectedQuality == quality {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(AppTheme.accent)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 
     @ViewBuilder

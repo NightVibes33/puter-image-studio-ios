@@ -13,7 +13,7 @@ struct SplashView: View {
     @State private var typedPrompt = ""
     @State private var sendReady = false
 
-    private let promptText = "Create a cinematic moonlit AI studio scene"
+    private let promptText = "Create a cinematic moonlit studio portrait"
     private let actions = SplashAction.defaults
 
     var body: some View {
@@ -150,13 +150,13 @@ struct SplashView: View {
             }
 
             VStack(spacing: 6) {
-                Text("Puter Image Studio")
+                Text("Image Studio")
                     .font(.system(size: 40, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.64)
 
-                Text("AI images from one native prompt.")
+                Text("Fully local image generation on your device.")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.74))
                     .multilineTextAlignment(.center)

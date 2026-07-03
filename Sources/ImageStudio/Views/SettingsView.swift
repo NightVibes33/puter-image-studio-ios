@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject private var settingsStore: AppSettingsStore
     @EnvironmentObject private var historyStore: GenerationHistoryStore
     @EnvironmentObject private var localModelInstaller: LocalModelInstallerStore
 
@@ -13,7 +12,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 localModelSection
-                defaultsSection
+                localDefaultsSection
                 historySection
                 aboutSection
             }
@@ -35,8 +34,6 @@ struct SettingsView: View {
             }
         }
     }
-
-    // MARK: - Local model section
 
     private var localModelSection: some View {
         Section {
@@ -81,14 +78,12 @@ struct SettingsView: View {
                         systemImage: "arrow.down.circle"
                     )
                 }
-
             case .active:
                 Button(role: .destructive) {
                     localModelInstaller.cancel()
                 } label: {
                     Label("Cancel Installation", systemImage: "xmark.circle")
                 }
-
             case .installed:
                 Button(role: .destructive) {
                     showDeleteModelConfirm = true
@@ -96,19 +91,17 @@ struct SettingsView: View {
                     Label("Remove Model", systemImage: "trash")
                 }
                 .foregroundStyle(.red)
-
-            case .failed(let e):
+            case .failed(let error):
                 Button {
-                    if e.isRetryable {
+                    if error.isRetryable {
                         localModelInstaller.install()
                     } else {
                         showInstaller = true
                     }
                 } label: {
-                    Label(e.isRetryable ? "Retry" : "Reinstall", systemImage: "arrow.clockwise")
+                    Label(error.isRetryable ? "Retry" : "Reinstall", systemImage: "arrow.clockwise")
                 }
             }
-
         } header: {
             Text("On-Device Model")
         } footer: {
@@ -120,7 +113,15 @@ struct SettingsView: View {
         }
     }
 
-    /// Extract `overallProgress` from the `.active` enum case; 0 otherwise.
+    private var localDefaultsSection: some View {
+        Section("Local Runtime") {
+            LabeledContent("Engine", value: "Apple Core ML Stable Diffusion")
+            LabeledContent("Default Steps", value: "\(LocalSDXLDefaults.stepCount)")
+            LabeledContent("Default CFG", value: String(format: "%.1f", LocalSDXLDefaults.guidanceScale))
+            LabeledContent("Offline", value: "Yes")
+        }
+    }
+
     private var activeOverallProgress: Double {
         if case .active(_, _, let overall, _, _) = localModelInstaller.state {
             return overall
@@ -166,7 +167,7 @@ struct SettingsView: View {
     private var statusSubtitle: String {
         switch localModelInstaller.state {
         case .missing:
-            return "On-device generation · No credits needed"
+            return "On-device generation · No server dependency"
         case .active(_, _, _, let speed, let eta):
             var parts: [String] = []
             if speed > 0 {
@@ -182,34 +183,6 @@ struct SettingsView: View {
             return e.recoverySuggestion ?? "Tap to retry"
         }
     }
-
-    // MARK: - Defaults section
-
-    private var defaultsSection: some View {
-        Section("Generation Defaults") {
-            Picker("Default Model", selection: Binding(
-                get: { settingsStore.defaultModel },
-                set: { settingsStore.defaultModelID = $0.id }
-            )) {
-                ForEach(ImageModel.presets) { model in
-                    Text(model.title).tag(model)
-                }
-            }
-
-            if settingsStore.defaultModel.supportsQuality {
-                Picker("Default Quality", selection: Binding(
-                    get: { settingsStore.defaultQuality(for: settingsStore.defaultModel) },
-                    set: { settingsStore.setDefaultQuality($0) }
-                )) {
-                    ForEach(settingsStore.defaultModel.supportedQualities) { q in
-                        Text(q.title).tag(Optional(q))
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - History section
 
     private var historySection: some View {
         Section("History") {
@@ -233,11 +206,10 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - About section
-
     private var aboutSection: some View {
         Section("About") {
             LabeledContent("Version", value: appVersion)
+            LabeledContent("Runtime", value: "Local-only")
             LabeledContent("Local Model Engine", value: "Apple Core ML · Split Einsum")
         }
     }
@@ -258,7 +230,7 @@ private extension LocalModelInstallPhase {
         case .extracting:       return "Extracting"
         case .validatingFiles:  return "Validating"
         case .activating:       return "Activating"
-        case .rollingBack:      return "Rolling Back"
+        case .rollingBack:      return "Rolling back"
         }
     }
 }

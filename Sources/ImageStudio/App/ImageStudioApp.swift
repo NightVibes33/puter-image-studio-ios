@@ -9,7 +9,6 @@ struct ImageStudioApp: App {
             RootView()
                 .environmentObject(environment)
                 .environmentObject(environment.historyStore)
-                .environmentObject(environment.settingsStore)
                 .environmentObject(environment.localModelInstallerStore)
         }
     }

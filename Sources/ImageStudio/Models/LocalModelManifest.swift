@@ -13,7 +13,7 @@ enum LocalModelChipTier: String, Codable, Sendable {
 // MARK: - Single model entry
 
 struct LocalModelEntry: Codable, Identifiable, Equatable, Sendable {
-    /// Matches `ImageModel.id` / `backendModel` used by the generation pipeline.
+    /// Stable local identifier for the installed on-device model.
     var id: String
     /// Human-readable semantic version string, e.g. "1.0.0".
     var version: String

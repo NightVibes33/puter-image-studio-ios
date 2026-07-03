@@ -18,7 +18,7 @@ enum LocalSDXLDefaults {
     static let negativePrompt: String = "blurry, low quality, cropped, worst quality, artifacts"
 }
 
-final class LocalStableDiffusionImageGenerationClient: ImageGenerationClient {
+final class LocalStableDiffusionImageGenerationClient: LocalImageGenerator {
     private let modelStore: LocalManifestModelStore
     private let imageDownloadClient: ImageDownloadClient
 
@@ -53,9 +53,9 @@ final class LocalStableDiffusionImageGenerationClient: ImageGenerationClient {
         #endif
     }
 
-    // MARK: - ImageGenerationClient
+    // MARK: - LocalImageGenerator
 
-    func generate(_ request: ImageGenerationRequest) async throws -> GeneratedImage {
+    func generate(_ request: LocalGenerationRequest) async throws -> GeneratedImage {
         #if canImport(StableDiffusion) && canImport(UIKit) && canImport(CoreML)
         guard let resourceURL = modelStore.installedResourceURL() else {
             throw GenerationError.localModelMissing
@@ -113,12 +113,10 @@ final class LocalStableDiffusionImageGenerationClient: ImageGenerationClient {
             prompt: request.prompt,
             negativePrompt: request.negativePrompt,
             revisedPrompt: nil,
-            model: request.model,
-            quality: request.quality,
+            modelDisplayName: ImageModel.fallback.title,
             width: width,
             height: height,
             createdAt: Date(),
-            remoteURL: nil,
             localFileName: localFileName,
             seed: resolvedSeed,
             stepCount: resolvedSteps,

@@ -1,9 +1,9 @@
 import Foundation
 
-struct UnavailableImageGenerationClient: ImageGenerationClient {
+struct UnavailableImageGenerationClient: LocalImageGenerator {
     var error: GenerationError
 
-    func generate(_ request: ImageGenerationRequest) async throws -> GeneratedImage {
+    func generate(_ request: LocalGenerationRequest) async throws -> GeneratedImage {
         throw error
     }
 }

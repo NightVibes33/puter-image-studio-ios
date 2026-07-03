@@ -4,7 +4,6 @@ import UIKit
 struct GenerateView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @EnvironmentObject private var historyStore: GenerationHistoryStore
-    @EnvironmentObject private var settingsStore: AppSettingsStore
     @EnvironmentObject private var localModelInstaller: LocalModelInstallerStore
 
     @State private var prompt = ""
@@ -90,7 +89,6 @@ struct GenerateView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
-                    .environmentObject(settingsStore)
                     .environmentObject(historyStore)
                     .environmentObject(localModelInstaller)
             }
@@ -578,19 +576,16 @@ struct GenerateView: View {
         let outputHeight = selectedAspect.height
         let resolvedSeed = UInt32(seed.trimmingCharacters(in: .whitespaces))
         let neg = negativePrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        let request = ImageGenerationRequest(
+        let request = LocalGenerationRequest(
             prompt: composedPrompt,
             negativePrompt: neg.isEmpty ? nil : neg,
-            model: selectedModel.backendModel,
-            quality: nil,
             width: outputWidth,
             height: outputHeight,
             seed: resolvedSeed,
             stepCount: stepCount,
-            guidanceScale: guidanceScale,
-            responseFormat: .b64JSON
+            guidanceScale: guidanceScale
         )
-        let client = environment.imageClient
+        let client = environment.imageGenerator
         let store  = historyStore
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
 

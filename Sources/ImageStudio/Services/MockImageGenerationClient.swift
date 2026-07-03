@@ -1,14 +1,14 @@
 import Foundation
 import UIKit
 
-final class MockImageGenerationClient: ImageGenerationClient {
+final class MockImageGenerationClient: LocalImageGenerator {
     private let imageDownloadClient: ImageDownloadClient
 
     init(imageDownloadClient: ImageDownloadClient) {
         self.imageDownloadClient = imageDownloadClient
     }
 
-    func generate(_ request: ImageGenerationRequest) async throws -> GeneratedImage {
+    func generate(_ request: LocalGenerationRequest) async throws -> GeneratedImage {
         try await Task.sleep(nanoseconds: 700_000_000)
         let id = UUID()
         let data = try renderPlaceholderPNG(prompt: request.prompt, width: request.width, height: request.height)
@@ -17,12 +17,10 @@ final class MockImageGenerationClient: ImageGenerationClient {
             id: id,
             prompt: request.prompt,
             revisedPrompt: request.prompt,
-            model: request.model,
-            quality: request.quality,
+            modelDisplayName: ImageModel.fallback.title,
             width: request.width,
             height: request.height,
-            createdAt: Date(),       // fix: was missing, caused compile error
-            remoteURL: nil,
+            createdAt: Date(),
             localFileName: localFileName
         )
     }

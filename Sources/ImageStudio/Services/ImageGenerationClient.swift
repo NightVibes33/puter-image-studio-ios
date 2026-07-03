@@ -1,5 +1,5 @@
 import Foundation
 
-protocol ImageGenerationClient: Sendable {
-    func generate(_ request: ImageGenerationRequest) async throws -> GeneratedImage
+protocol LocalImageGenerator: Sendable {
+    func generate(_ request: LocalGenerationRequest) async throws -> GeneratedImage
 }

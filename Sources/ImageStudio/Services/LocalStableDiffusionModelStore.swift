@@ -1,7 +1,7 @@
 import Foundation
 
 struct LocalStableDiffusionModelStore {
-    static let backendModelID = "local-coreml-sdxl"
+    static let localModelIdentifier = "local-coreml-sdxl"
     static let modelFolderName = "coreml-stable-diffusion-xl-base-ios_split_einsum_compiled"
     static let downloadURL = URL(string: "https://huggingface.co/apple/coreml-stable-diffusion-xl-base-ios/resolve/main/coreml-stable-diffusion-xl-base-ios_split_einsum_compiled.zip")!
 

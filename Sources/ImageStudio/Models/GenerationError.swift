@@ -14,7 +14,6 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
     case requestTimedOut
     case rateLimited
     case unauthorized
-    case missingPuterConnection
     case localModelMissing
     case localModelStorageTooLow(String)
     case localEngineUnavailable
@@ -31,37 +30,35 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .emptyPrompt:
             return "Enter a prompt before generating."
         case .invalidEndpoint:
-            return "API not configured."
+            return "The local generation configuration is invalid."
         case .invalidResponse:
-            return "The image service returned an unreadable response."
+            return "The local engine returned an unreadable image."
         case .invalidImageURL:
-            return "The generated image link was missing or invalid."
+            return "The generated image could not be opened."
         case .downloadFailed:
-            return "The image was created, but the download failed. Try again."
+            return "The generated image could not be saved locally."
         case .networkUnavailable:
-            return "Network unavailable."
+            return "A required download could not start because the network is unavailable."
         case .requestTimedOut:
-            return "Generation is taking too long. Try again in a moment."
+            return "The current operation took too long. Try again."
         case .rateLimited:
-            return "You have reached the current generation limit. Try again later."
+            return "The device is temporarily too busy to continue. Try again in a moment."
         case .unauthorized:
-            return "The image service is not authorized. Contact support."
-        case .missingPuterConnection:
-            return "Connect Puter before using cloud image models."
+            return "This build is not authorized to access the required local resources."
         case .localModelMissing:
-            return "Install the local SDXL model before generating offline."
+            return "Install the local SDXL model before generating."
         case .localModelStorageTooLow(let message):
             return message
         case .localEngineUnavailable:
             return "This build does not include the local Core ML Stable Diffusion engine."
         case .insufficientCredits(let message):
-            return message.isEmpty ? "The Puter account for this build has insufficient credits." : message
+            return message.isEmpty ? "The current local configuration cannot complete this request." : message
         case .unsupportedModel(let message):
-            return message.isEmpty ? "That model is not available yet." : message
+            return message.isEmpty ? "That local model is not available in this build." : message
         case .providerUnavailable(let message):
-            return message.isEmpty ? "The image provider is temporarily unavailable. Try again." : message
+            return message.isEmpty ? "The local generation engine is temporarily unavailable. Try again." : message
         case .server(let message):
-            return message.isEmpty ? "The image service had a problem. Try again." : message
+            return message.isEmpty ? "A local runtime error occurred. Try again." : message
         case .photosAccessDenied:
             return "Allow photo access to save images to Photos."
         case .cancelled:
@@ -73,10 +70,6 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
 
     var recoverySuggestion: String? {
         switch self {
-        case .rateLimited:
-            return "Lower quality or wait for the limit window to reset."
-        case .missingPuterConnection:
-            return "Open Settings and connect Puter, or switch back to Local SDXL."
         case .localModelMissing:
             return "Open Settings and install Local SDXL."
         case .localModelStorageTooLow:
@@ -84,11 +77,11 @@ enum GenerationError: LocalizedError, Equatable, Sendable {
         case .localEngineUnavailable:
             return "Add the StableDiffusion Swift package to this build."
         case .insufficientCredits:
-            return "Use a Puter account/session with available credits."
-        case .invalidEndpoint:
-            return "Install a build with the deployed image API URL."
+            return "Reduce resolution or retry after freeing device resources."
         case .providerUnavailable, .networkUnavailable, .requestTimedOut:
-            return "Check the API URL or connection, then retry."
+            return "Retry after checking local storage, connectivity for model downloads, and device state."
+        case .photosAccessDenied:
+            return "Enable Photos access in Settings to export images."
         default:
             return nil
         }

@@ -3,42 +3,37 @@ import SwiftUI
 
 @MainActor
 final class AppEnvironment: ObservableObject {
-    let imageClient: any ImageGenerationClient & Sendable
+    let imageGenerator: any LocalImageGenerator & Sendable
     let imageDownloadClient: ImageDownloadClient
     let photoLibrarySaver: PhotoLibrarySaver
     let historyStore: GenerationHistoryStore
-    let settingsStore: AppSettingsStore
     let localModelInstallerStore: LocalModelInstallerStore
 
     init(
-        imageClient: any ImageGenerationClient & Sendable,
+        imageGenerator: any LocalImageGenerator & Sendable,
         imageDownloadClient: ImageDownloadClient,
         photoLibrarySaver: PhotoLibrarySaver,
         historyStore: GenerationHistoryStore,
-        settingsStore: AppSettingsStore,
         localModelInstallerStore: LocalModelInstallerStore
     ) {
-        self.imageClient = imageClient
+        self.imageGenerator = imageGenerator
         self.imageDownloadClient = imageDownloadClient
         self.photoLibrarySaver = photoLibrarySaver
         self.historyStore = historyStore
-        self.settingsStore = settingsStore
         self.localModelInstallerStore = localModelInstallerStore
     }
 
     static func live() -> AppEnvironment {
         let imageDownloadClient = ImageDownloadClient()
-        let settingsStore = AppSettingsStore()
         let historyStore = GenerationHistoryStore(imageDownloadClient: imageDownloadClient)
         let installerStore = LocalModelInstallerStore(modelID: "local-sdxl-base")
 
-        // Resolve the manifest entry for the primary local model
         let localEntry = (try? LocalModelCatalog.bundled())?.entry(id: "local-sdxl-base")
             ?? LocalModelEntry(
                 id: "local-sdxl-base",
                 version: "1.0.0",
                 title: "SDXL Base",
-                subtitle: "On-device · No credits",
+                subtitle: "On-device · No internet after install",
                 archiveURL: URL(string: "https://huggingface.co/apple/coreml-stable-diffusion-xl-base-ios/resolve/main/coreml-stable-diffusion-xl-base-ios_split_einsum_compiled.zip")!,
                 sha256: "",
                 installFolderName: "coreml-stable-diffusion-xl-base-ios_split_einsum_compiled",
@@ -53,34 +48,29 @@ final class AppEnvironment: ObservableObject {
                 mirrorURLs: []
             )
 
-        let localSDClient = LocalStableDiffusionImageGenerationClient(
+        let localGenerator = LocalStableDiffusionImageGenerationClient(
             entry: localEntry,
             imageDownloadClient: imageDownloadClient
         )
 
         return AppEnvironment(
-            imageClient: localSDClient,
+            imageGenerator: localGenerator,
             imageDownloadClient: imageDownloadClient,
             photoLibrarySaver: PhotoLibrarySaver(),
             historyStore: historyStore,
-            settingsStore: settingsStore,
             localModelInstallerStore: installerStore
         )
     }
 
     static func preview() -> AppEnvironment {
         let imageDownloadClient = ImageDownloadClient()
-        // Use an ephemeral UserDefaults suite so previews don't touch real storage
-        let previewDefaults = UserDefaults(suiteName: "preview-\(UUID().uuidString)") ?? .standard
-        let settingsStore = AppSettingsStore(userDefaults: previewDefaults)
         let historyStore = GenerationHistoryStore(imageDownloadClient: imageDownloadClient)
         let installerStore = LocalModelInstallerStore(modelID: "local-sdxl-base")
         return AppEnvironment(
-            imageClient: MockImageGenerationClient(imageDownloadClient: imageDownloadClient),
+            imageGenerator: MockImageGenerationClient(imageDownloadClient: imageDownloadClient),
             imageDownloadClient: imageDownloadClient,
             photoLibrarySaver: PhotoLibrarySaver(),
             historyStore: historyStore,
-            settingsStore: settingsStore,
             localModelInstallerStore: installerStore
         )
     }

@@ -8,7 +8,6 @@ struct GeneratedImageDetailView: View {
     var onReuse: ((GeneratedImage) -> Void)?
     @State private var shareURL: URL?
     @State private var showDeleteConfirm = false
-    @State private var savedToPhotos = false
 
     var body: some View {
         NavigationStack {
@@ -55,8 +54,6 @@ struct GeneratedImageDetailView: View {
         }
     }
 
-    // MARK: - Image
-
     private var imageDisplay: some View {
         GeneratedImageFileView(fileURL: historyStore.localURL(for: image))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -65,8 +62,6 @@ struct GeneratedImageDetailView: View {
                     .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             )
     }
-
-    // MARK: - Metadata
 
     private var metadataSection: some View {
         GroupBox("Prompt") {
@@ -85,7 +80,7 @@ struct GeneratedImageDetailView: View {
                 if let revised = image.revisedPrompt, revised != image.prompt {
                     Divider()
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Revised prompt").font(.caption).foregroundStyle(.tertiary)
+                        Text("Styled prompt").font(.caption).foregroundStyle(.tertiary)
                         Text(revised).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
                     }
                 }
@@ -97,7 +92,7 @@ struct GeneratedImageDetailView: View {
     private var inferenceMetadataSection: some View {
         GroupBox {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 8) {
-                metadataRow("Model",   value: image.model)
+                metadataRow("Model",   value: image.modelDisplayName)
                 if let v = image.modelVersion { metadataRow("Version", value: "v\(v)") }
                 metadataRow("Size",    value: "\(image.width) × \(image.height)")
                 metadataRow("Created", value: image.createdAt.formatted(date: .abbreviated, time: .shortened))
@@ -109,9 +104,6 @@ struct GeneratedImageDetailView: View {
                 }
                 if let cfg = image.guidanceScale {
                     metadataRow("CFG", value: String(format: "%.1f", cfg))
-                }
-                if let q = image.quality {
-                    metadataRow("Quality", value: q.capitalized)
                 }
             }
         } label: {
@@ -132,22 +124,8 @@ struct GeneratedImageDetailView: View {
         }
     }
 
-    // MARK: - Actions
-
     private var actionRow: some View {
         HStack(spacing: 12) {
-            Button {
-                Task {
-                    let url = historyStore.localURL(for: image)
-                    // PhotoLibrarySaver is accessed via environment; fall back gracefully
-                    savedToPhotos = true
-                }
-            } label: {
-                Label("Save", systemImage: "square.and.arrow.down")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-
             Button {
                 shareURL = historyStore.localURL(for: image)
             } label: {
