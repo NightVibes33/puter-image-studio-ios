@@ -8,6 +8,8 @@ final class LocalModelInstallerStore: ObservableObject {
 
     private let modelID: String
     private let catalog: LocalModelCatalog
+    let deviceCapability: LocalDeviceCapability
+    let runtimeProfile: LocalRuntimeProfile
     private var coordinator: LocalModelInstallCoordinator?
     private var installTask: Task<Void, Never>?
     private var retryCount = 0
@@ -19,12 +21,16 @@ final class LocalModelInstallerStore: ObservableObject {
         self.modelID = modelID
         let loaded = (try? LocalModelCatalog.bundled()) ?? LocalModelCatalog(schemaVersion: 1, models: [])
         self.catalog = loaded
+        self.deviceCapability = LocalDeviceCapability.current()
+        self.runtimeProfile = deviceCapability.runtimeProfile
 
         // Determine initial state — never crash even if catalog is empty
         if let entry = loaded.entry(id: modelID) {
             let store = LocalManifestModelStore(entry: entry)
             if let version = store.installedVersion() {
                 self.state = .installed(version: version)
+            } else if let unsupportedReason = deviceCapability.unsupportedReason(for: entry) {
+                self.state = .unsupportedDevice(unsupportedReason)
             } else {
                 // Check if an install was interrupted (resume data exists)
                 let resumeURL = LocalModelDownloadManager.resumeDataURL(modelID: modelID)
@@ -67,6 +73,8 @@ final class LocalModelInstallerStore: ObservableObject {
             let store = LocalManifestModelStore(entry: entry)
             if let version = store.installedVersion() {
                 state = .installed(version: version)
+            } else if let unsupportedReason = deviceCapability.unsupportedReason(for: entry) {
+                state = .unsupportedDevice(unsupportedReason)
             } else {
                 state = .missing
             }
@@ -79,6 +87,10 @@ final class LocalModelInstallerStore: ObservableObject {
         guard !state.isBusy else { return }
         guard let entry = catalog.entry(id: modelID) else {
             state = .failed(.unknownModelID(modelID))
+            return
+        }
+        if let unsupportedReason = deviceCapability.unsupportedReason(for: entry) {
+            state = .unsupportedDevice(unsupportedReason)
             return
         }
         // Disk space pre-check — fail fast with a clear error rather than crashing mid-download
@@ -105,7 +117,11 @@ final class LocalModelInstallerStore: ObservableObject {
         try? FileManager.default.removeItem(
             at: LocalModelDownloadManager.resumeDataURL(modelID: modelID)
         )
-        state = .missing
+        if let unsupportedReason = deviceCapability.unsupportedReason(for: entry) {
+            state = .unsupportedDevice(unsupportedReason)
+        } else {
+            state = .missing
+        }
     }
 
     // MARK: - Private

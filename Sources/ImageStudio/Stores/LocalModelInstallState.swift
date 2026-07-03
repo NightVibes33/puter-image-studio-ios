@@ -14,6 +14,7 @@ enum LocalModelInstallPhase: String, Equatable, Sendable {
 
 enum LocalModelInstallState: Equatable, Sendable {
     case missing
+    case unsupportedDevice(String)
     case active(
         phase: LocalModelInstallPhase,
         progress: Double,           // 0.0–1.0 within the current phase
@@ -79,6 +80,7 @@ enum LocalModelInstallState: Equatable, Sendable {
     var phaseDescription: String {
         switch self {
         case .missing: return "Not installed"
+        case .unsupportedDevice: return "Unsupported"
         case .active(let phase, _, _, _, _):
             switch phase {
             case .queued:          return "Queued"
@@ -92,5 +94,10 @@ enum LocalModelInstallState: Equatable, Sendable {
         case .installed: return "Installed"
         case .failed(let e): return e.errorDescription ?? "Failed"
         }
+    }
+
+    var unsupportedReason: String? {
+        if case .unsupportedDevice(let reason) = self { return reason }
+        return nil
     }
 }

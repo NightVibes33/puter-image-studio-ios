@@ -62,6 +62,7 @@ struct LocalModelInstallView: View {
     private var ringIcon: String {
         switch installer.state {
         case .missing:                          return "arrow.down.circle"
+        case .unsupportedDevice:                return "iphone.slash"
         case .active(let p, _, _, _, _):
             switch p {
             case .downloading:                  return "arrow.down.circle.fill"
@@ -81,7 +82,7 @@ struct LocalModelInstallView: View {
         switch installer.state {
         case .installed:  return .green
         case .failed:     return .orange
-        case .missing:    return .secondary
+        case .missing, .unsupportedDevice: return .secondary
         case .active:     return AppTheme.accent
         }
     }
@@ -145,6 +146,8 @@ struct LocalModelInstallView: View {
                 return "\(entry.title) · \(entry.version)"
             }
             return "Local SDXL Model"
+        case .unsupportedDevice:
+            return "Unsupported Device"
         case .active(let phase, _, _, _, _): return phase.displayTitle
         case .installed(let version):        return "Installed · v\(version)"
         case .failed(let e):                 return e.errorDescription ?? "Install failed"
@@ -155,9 +158,11 @@ struct LocalModelInstallView: View {
         switch installer.state {
         case .missing:
             if let entry = installer.modelEntry {
-                return "Requires \(entry.requiredFreeSpaceDescription) free storage. Connect to Wi-Fi before starting."
+                return "Requires \(entry.requiredFreeSpaceDescription) free storage. Recommended profile: \(installer.runtimeProfile.title)."
             }
             return "Requires ~10 GB free storage."
+        case .unsupportedDevice(let reason):
+            return reason
         case .active(let phase, _, _, _, _):
             switch phase {
             case .downloading:      return "Keep the app open while downloading. The download resumes if interrupted."
@@ -188,6 +193,9 @@ struct LocalModelInstallView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+
+            case .unsupportedDevice:
+                EmptyView()
 
             case .active:
                 Button(role: .destructive, action: { installer.cancel() }) {

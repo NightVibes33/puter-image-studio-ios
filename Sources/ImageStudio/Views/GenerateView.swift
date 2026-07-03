@@ -102,7 +102,13 @@ struct GenerateView: View {
             )) {
                 if let shareURL { ShareSheet(activityItems: [shareURL]) }
             }
-            .onAppear { localModelInstaller.refresh() }
+            .onAppear {
+                localModelInstaller.refresh()
+                guard !didLoadSettings else { return }
+                stepCount = localModelInstaller.runtimeProfile.defaultStepCount
+                guidanceScale = localModelInstaller.runtimeProfile.defaultGuidanceScale
+                didLoadSettings = true
+            }
             .onDisappear { generationTask?.cancel() }
         }
     }
@@ -234,12 +240,19 @@ struct GenerateView: View {
         .padding(12)
         .background(.black.opacity(0.36), in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(glassBorder(cornerRadius: AppTheme.cornerRadius))
-        .onTapGesture { if !localModelInstaller.state.isInstalled { showInstaller = true } }
+        .onTapGesture {
+            if case .unsupportedDevice = localModelInstaller.state {
+                showSettings = true
+            } else if !localModelInstaller.state.isInstalled {
+                showInstaller = true
+            }
+        }
     }
 
     private var localModelStatusIcon: String {
         switch localModelInstaller.state {
         case .missing:                          return "externaldrive.badge.exclamationmark"
+        case .unsupportedDevice:                return "iphone.slash"
         case .active(let phase, _, _, _, _):
             switch phase {
             case .downloading:                  return "arrow.down.circle"
@@ -257,7 +270,7 @@ struct GenerateView: View {
 
     private var localModelStatusTint: Color {
         switch localModelInstaller.state {
-        case .failed, .missing:   return AppTheme.warmAccent
+        case .failed, .missing, .unsupportedDevice: return AppTheme.warmAccent
         case .installed:          return AppTheme.success
         case .active:             return AppTheme.accent
         }
@@ -266,6 +279,7 @@ struct GenerateView: View {
     private var localModelStatusTitle: String {
         switch localModelInstaller.state {
         case .missing:                       return "Install SDXL model"
+        case .unsupportedDevice:             return "Device not supported"
         case .active(let phase, _, _, _, _): return phase.displayTitle
         case .installed(let version):        return "SDXL v\(version) ready"
         case .failed(let e):                 return e.errorDescription ?? "Install failed"
@@ -283,6 +297,8 @@ struct GenerateView: View {
                 return "Requires \(entry.requiredFreeSpaceDescription) free \u{00B7} Private, no internet needed."
             }
             return "Tap Install to download the on-device model."
+        case .unsupportedDevice(let reason):
+            return reason
         case .active(_, _, let overall, let speed, let eta):
             let pct = Int(overall * 100)
             if let eta {
@@ -305,6 +321,9 @@ struct GenerateView: View {
         switch localModelInstaller.state {
         case .active:
             Button("Cancel", role: .destructive) { localModelInstaller.cancel() }
+                .buttonStyle(.bordered)
+        case .unsupportedDevice:
+            Button("Details") { showSettings = true }
                 .buttonStyle(.bordered)
         case .missing:
             Button("Install") {
@@ -435,6 +454,17 @@ struct GenerateView: View {
     private var advancedLocalOptions: some View {
         VStack(spacing: 12) {
             HStack {
+                Label(localModelInstaller.runtimeProfile.title, systemImage: "speedometer")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.80))
+                Spacer()
+                Text(localModelInstaller.runtimeProfile.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.60))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+            }
+            HStack {
                 Label("Seed", systemImage: "dice")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.80))
@@ -459,7 +489,7 @@ struct GenerateView: View {
                 Slider(value: Binding(
                     get: { Double(stepCount) },
                     set: { stepCount = Int($0.rounded()) }
-                ), in: 10...50, step: 1)
+                ), in: 10...Double(localModelInstaller.runtimeProfile.maxStepCount), step: 1)
                 .tint(AppTheme.accent)
             }
             HStack {
@@ -561,6 +591,11 @@ struct GenerateView: View {
     private func generate() {
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedPrompt.isEmpty else { error = .emptyPrompt; return }
+        if case .unsupportedDevice(let reason) = localModelInstaller.state {
+            error = .unsupportedDevice(reason)
+            showSettings = true
+            return
+        }
         guard localModelInstaller.state.isInstalled else {
             showInstaller = true; return
         }

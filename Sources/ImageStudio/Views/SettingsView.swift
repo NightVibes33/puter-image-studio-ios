@@ -78,6 +78,8 @@ struct SettingsView: View {
                         systemImage: "arrow.down.circle"
                     )
                 }
+            case .unsupportedDevice:
+                EmptyView()
             case .active:
                 Button(role: .destructive) {
                     localModelInstaller.cancel()
@@ -106,7 +108,7 @@ struct SettingsView: View {
             Text("On-Device Model")
         } footer: {
             if let entry = localModelInstaller.modelEntry {
-                Text("SDXL Base v\(entry.version) · Requires \(entry.requiredFreeSpaceDescription) free during install · Runs fully offline after setup.")
+                Text("SDXL Base v\(entry.version) · Requires \(entry.requiredFreeSpaceDescription) free during install · \(localModelInstaller.runtimeProfile.title) runtime profile · Runs fully offline after setup.")
             } else {
                 Text("Runs fully offline after setup.")
             }
@@ -116,8 +118,11 @@ struct SettingsView: View {
     private var localDefaultsSection: some View {
         Section("Local Runtime") {
             LabeledContent("Engine", value: "Apple Core ML Stable Diffusion")
-            LabeledContent("Default Steps", value: "\(LocalSDXLDefaults.stepCount)")
-            LabeledContent("Default CFG", value: String(format: "%.1f", LocalSDXLDefaults.guidanceScale))
+            LabeledContent("Profile", value: localModelInstaller.runtimeProfile.title)
+            LabeledContent("Default Steps", value: "\(localModelInstaller.runtimeProfile.defaultStepCount)")
+            LabeledContent("Default CFG", value: String(format: "%.1f", localModelInstaller.runtimeProfile.defaultGuidanceScale))
+            LabeledContent("Max Steps", value: "\(localModelInstaller.runtimeProfile.maxStepCount)")
+            LabeledContent("Device RAM", value: localModelInstaller.deviceCapability.memoryDescription)
             LabeledContent("Offline", value: "Yes")
         }
     }
@@ -132,6 +137,7 @@ struct SettingsView: View {
     private var statusIcon: String {
         switch localModelInstaller.state {
         case .missing:                        return "externaldrive.badge.plus"
+        case .unsupportedDevice:              return "iphone.slash"
         case .active(let p, _, _, _, _):
             switch p {
             case .downloading:                return "arrow.down.circle.fill"
@@ -150,7 +156,7 @@ struct SettingsView: View {
     private var statusTint: Color {
         switch localModelInstaller.state {
         case .installed:          return .green
-        case .failed, .missing:   return .orange
+        case .failed, .missing, .unsupportedDevice: return .orange
         case .active:             return AppTheme.accent
         }
     }
@@ -158,6 +164,7 @@ struct SettingsView: View {
     private var statusTitle: String {
         switch localModelInstaller.state {
         case .missing:                       return "SDXL Base — Not Installed"
+        case .unsupportedDevice:             return "SDXL Base — Unsupported Device"
         case .active(let p, _, let o, _, _): return "\(p.settingsLabel) · \(Int(o * 100))%"
         case .installed(let v):              return "SDXL Base v\(v) — Installed"
         case .failed(let e):                 return e.errorDescription ?? "Install Failed"
@@ -168,6 +175,8 @@ struct SettingsView: View {
         switch localModelInstaller.state {
         case .missing:
             return "On-device generation · No server dependency"
+        case .unsupportedDevice(let reason):
+            return reason
         case .active(_, _, _, let speed, let eta):
             var parts: [String] = []
             if speed > 0 {
@@ -211,6 +220,7 @@ struct SettingsView: View {
             LabeledContent("Version", value: appVersion)
             LabeledContent("Runtime", value: "Local-only")
             LabeledContent("Local Model Engine", value: "Apple Core ML · Split Einsum")
+            LabeledContent("Device", value: localModelInstaller.deviceCapability.modelIdentifier)
         }
     }
 
